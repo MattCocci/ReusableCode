@@ -1,0 +1,102 @@
+
+== REAL GDP (RGDP) ===========================================
+
+    Title:               Real Gross Domestic Product
+    Series ID:           GDPC1
+    Source:              U.S. Department of Commerce: Bureau of Economic Analysis
+    Release:             Gross Domestic Product
+    Seasonal Adjustment: Seasonally Adjusted Annual Rate
+    Frequency:           Quarterly
+    Units:               Billions of Chained 2009 Dollars
+    Date Range:          1947-01-01 to 2013-04-01
+    Last Updated:        2013-09-26 7:51 AM CDT
+    Notes:               BEA Account Code: A191RX1
+			 
+			 Real gross domestic product is the inflation adjusted value of the
+			 goods and services produced by labor and property located in the
+			 United States. 
+			  
+			 For more information see the Guide to the National Income and Product
+			 Accounts of the United States (NIPA) -
+			 (http://www.bea.gov/national/pdf/nipaguid.pdf)
+
+
+== GDP Deflator (Prices) ======================================
+
+    Title:               Gross Domestic Product: Implicit Price Deflator
+    Series ID:           GDPDEF
+    Source:              U.S. Department of Commerce: Bureau of Economic Analysis
+    Release:             Gross Domestic Product
+    Seasonal Adjustment: Seasonally Adjusted
+    Frequency:           Quarterly
+    Units:               Index 2009=100
+    Date Range:          1947-01-01 to 2013-04-01
+    Last Updated:        2013-09-26 7:51 AM CDT
+    Notes:               BEA Account Code: A191RD3
+			 
+			 The number of decimal places reported varies over time. A Guide to the
+			 National Income and Product Accounts of the United States (NIPA) -
+			 (http://www.bea.gov/national/pdf/nipaguid.pdf)
+
+
+== Money Stock (M1) ==========================================
+
+    Title:               M1 Money Stock
+    Series ID:           M1SL
+    Source:              Board of Governors of the Federal Reserve System
+    Release:             H.6 Money Stock Measures
+    Seasonal Adjustment: Seasonally Adjusted
+    Frequency:           Quarterly
+    Aggregation Method:  End of Period
+    Units:               Billions of Dollars
+    Date Range:          1959-01-01 to 2013-09-01
+    Last Updated:        2013-10-18 6:36 AM CDT
+    Notes:               M1 includes funds that are readily accessible for spending. M1
+			 consists of: (1) currency outside the U.S. Treasury, Federal Reserve
+			 Banks, and the vaults of depository institutions; (2) traveler's
+			 checks of nonbank issuers; (3) demand deposits; and (4) other
+			 checkable deposits (OCDs), which consist primarily of negotiable order
+			 of withdrawal (NOW) accounts at depository institutions and credit
+			 union share draft accounts. Seasonally adjusted M1 is calculated by
+			 summing currency, traveler's checks, demand deposits, and OCDs, each
+			 seasonally adjusted separately.
+
+
+== Unemployment ============================================
+
+    Title:               Civilian Unemployment Rate
+    Series ID:           UNRATE
+    Source:              U.S. Department of Labor: Bureau of Labor Statistics
+    Release:             Employment Situation
+    Seasonal Adjustment: Seasonally Adjusted
+    Frequency:           Quarterly
+    Aggregation Method:  End of Period
+    Units:               Percent
+    Date Range:          1948-01-01 to 2013-08-01
+    Last Updated:        2013-09-06 9:06 AM CDT
+    Notes:               The unemployment rate represents the number of unemployed as a
+			 percentage of the labor force. Labor force data are restricted to
+			 people 16 years of age and older, who currently reside in 1 of the 50
+			 states or the District of Columbia, who do not reside in institutions
+			 (e.g., penal and mental facilities, homes for the aged), and who are
+			 not on active duty in the Armed Forces.
+			 
+			 This rate is also defined as the U-3 measure of labor
+			 underutilization.
+
+== WAGES ===================================================
+
+    Title:               Compensation of Employees: Wages & Salary Accruals
+    Series ID:           WASCUR
+    Source:              U.S. Department of Commerce: Bureau of Economic Analysis
+    Release:             Gross Domestic Product
+    Seasonal Adjustment: Seasonally Adjusted Annual Rate
+    Frequency:           Quarterly
+    Units:               Billions of Dollars
+    Date Range:          1947-01-01 to 2013-04-01
+    Last Updated:        2013-09-26 7:51 AM CDT
+    Notes:               BEA Account Code: A034RC1
+			 
+			 A Guide to the National Income and Product Accounts of the United
+			 States (NIPA) - (http://www.bea.gov/national/pdf/nipaguid.pdf)
+
