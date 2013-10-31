@@ -18,17 +18,21 @@
 #   variables that we want to replace with dummy
 #   variables; you set dummify.cols = c(x, y, ...)
 #   when you run reg
-reg <- function(X, y, cons=1, dummify.cols=NULL, homosked=0){
+reg <- function(X, y, cons=1, dummify.cols=0, homosked=0){
+
+    # Observations
+    n <- nrow(X) 
+    k <- ncol(X)
 
     ## Remove rows with an NA ##
-    ind <- !(is.na(y) & rowSums(is.na(X) %*% diag(n)))
+    ind <- !as.numeric((is.na(y) & rowSums(is.na(X))))
     X <- X[ind, ]
     y <- y[ind, ]
 
 
     ## Dummify categorical variables ##
     n.col <- ncol(X)
-    if(dummify.cols != NULL){
+    if(dummify.cols != 0){
 
 	to.dum <- X[ , dummify.cols]
 	X <- X[ , -dummify.cols]
@@ -51,9 +55,6 @@ reg <- function(X, y, cons=1, dummify.cols=NULL, homosked=0){
     }
 
 
-    # Observations
-    n <- nrow(X) 
-    k <- ncol(X)
 
     # Add a constant column if specified
     if(cons == 1){  	
@@ -95,16 +96,16 @@ reg <- function(X, y, cons=1, dummify.cols=NULL, homosked=0){
     # Compute ROBUST covariance matrix estimators
 
     # Eicker-White covariance matrix estimator
-    D.hat <- diag(residuals^2)
+    D.hat <- diag(as.vector(residuals^2))
     V.white <- solve((1/n) * (t(X) %*% X)) %*% ((1/n) * (t(X) %*% D.hat %*% X)) %*% solve((1/n) * (t(X) %*% X))
     V.white <- (n/(n-k))*V.white 
 	# Rescaling so that it's unbiased (it's usually
 	# biased towards zero)
     
-    D.bar <- diag(std.residuals^2) 
+    D.bar <- diag(as.vector(std.residuals^2))
     V.bar <- solve((1/n) * (t(X) %*% X)) %*% ((1/n) * (t(X) %*% D.bar %*% X)) %*% solve((1/n) * (t(X) %*% X))
 	
-    D.tilde <- diag(pred.error^2)
+    D.tilde <- diag(as.vector(pred.error^2))
     V.tilde <- solve((1/n) * (t(X) %*% X)) %*% ((1/n) * (t(X) %*% D.tilde %*% X)) %*% solve((1/n) * (t(X) %*% X))
 
     # The standard output will be the zero-bias
@@ -117,7 +118,7 @@ reg <- function(X, y, cons=1, dummify.cols=NULL, homosked=0){
 
     # Get the coefficient change from full sample estimate
     #	to leave-one-out estimate of beta
-    coeff.chg <- solve(t(X) %*% X) %*% t(X) %*% (diag(pred.error))
+    coeff.chg <- solve(t(X) %*% X) %*% t(X) %*% (diag(as.vector(pred.error)))
     pred.chg <- (diag(n) * P) %*% pred.error
     
 
@@ -125,28 +126,28 @@ reg <- function(X, y, cons=1, dummify.cols=NULL, homosked=0){
     R.squared <- 1 - (sum(residuals^2) / sum((y - mean(y))^2))
 
     # Adjusted R squared
-    R.Squared.adj <- 1 - ((n-1)*(t(residuals) %*% residuals)) /
+    R.squared.adj <- 1 - ((n-1)*(t(residuals) %*% residuals)) /
 			((n-k)*(t(y-mean(y)) %*% (y-mean(y))))
 
     # R squared from prediction errors
-    R.Squared.tilde <- 1 - (t(pred.error) %*% pred.error) /
+    R.squared.tilde <- 1 - (t(pred.error) %*% pred.error) /
 			    (t(y-mean(y)) %*% (y-mean(y)))
 
 
     # Return the estimates
     toRet <- list("Coefficients" = beta.hat, 
-		  "Standard Errors" = std.errors,
-		  "Cov Matrix Estimator" = V, 
-		  "Fitted Values" = y.hat,
+		  "Std.Errors" = std.errors,
+		  "Cov.Matrix.Estimator" = V, 
+		  "Fitted.Values" = y.hat,
 		  "Residuals" = residuals,
-		  "Standardized Residuals" = std.residuals,
-		  "Predicted Error" = pred.error,
-		  "Leverage Values" = leverage,
-		  "Coefficient Change bc of Obs" = coeff.chg,
-		  "Prediction Change bc of Obs" = pred.chg,
-		  "R-Squared Tilde (BEST)" = R.squared.tilde,
-		  "Adj. R-Squared" = R.squared.adj,
-		  "R-Squared" = R.squared)
+		  "Std.Residuals" = std.residuals,
+		  "Pred.Error" = pred.error,
+		  "Leverage.Values" = leverage,
+		  "Coeff.Change.From.Obs" = coeff.chg,
+		  "Prediction.Change.From.Obs" = pred.chg,
+		  "RSquared.Tilde" = R.squared.tilde,
+		  "Adj.RSquared" = R.squared.adj,
+		  "RSquared" = R.squared)
     return(toRet)
 }
 
