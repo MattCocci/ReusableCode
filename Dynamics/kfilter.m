@@ -1,39 +1,19 @@
-function [L,zend,Pend,varargout] = ...
-  kfilter(data, lead, a, F, b, H, R, Q, M, G, W, s, P)
-% This version of the Kalman Filter is designed for a model with time-varying
-% volatilities of the shocks. It is assumed that this filtering is being
-% done conditional on a set of time-varying volatility states that "adjust" % the variance of the shocks in each period. This is done by adjusting the
-% shock covariance matrix in each period.
-
-% For this reason, additional inputs are needed. First the volatility
-% states must be included, in the "W" matrix, which should be Nshocks x T. 
-% Moreover, I am separating out the components of what would normally be 
-% called "var" or "VVall" to make it easier to adjust the shock covariance matrix.
-% Therefore R and Q will be included instead of the standard "V" matrix
-% that accounts for the effects of both. Note also that this program will
-% only work if the shocks are uncorrelated, i.e. Q is a diagonal matrix.
-
-% More generally, this program is adapted from kalcvf2NaN, which is designed 
-% to deal with missing data, which MUST correspond to NaN in the 'data' matrix
-% if an element of the vector y(t) is missing (NaN) for the observation t, the corresponding row is ditched from the 
-% measurement equation.
+function [L,zend,Pend,varargout] = kfilter(data, lead, C, T, R, D, M, Q, M, G, W, s, P)
+%
+% More generally, this program is adapted from kalcvf2NaN, which is designed to
+% deal with missing data, which MUST correspond to NaN in the 'data' matrix if
+% an element of the vector y(t) is missing (NaN) for the observation t, the
+% corresponding row is ditched from the measurement equation.
 %
 % DG 4/9/10
 %
 % State Space Model and Components
-% 
-%     z(t+1) = a+F*z(t)+R*eta(t)     (state or transition equation)
-%       y(t) = b+H*z(t)+eps(t)     (observation or measurement equation)
 %
 %   s_t = C + T*s_{t-1} + R*e_t (state or transition equation)
 %   y_t = D + M*s_t + Q*eta_t   (observation or measurement equation)
 %
-%   [logl, <pred, vpred, <filt, vfilt>>]=kalcvf(data, lead, a, F, b, H, var, <z0, vz0>)
-%   computes the one-step prediction and the filtered estimate, as well as their covariance matrices.
-%   The function uses forward recursions, and you can also use it to obtain k-step estimates.
-%
-%   The inputs to the KALCVF function are as follows:
-%     data is a Ny?T matrix containing data (y(1), ... , y(T)).
+%   The inputs to the function are as follows:
+%     data is a Ny x T matrix containing data (y(1), ... , y(T)).
 %     lead is the number of steps to forecast after the end of the data.
 %        a is an Nz?1 vector for a time-invariant input vector in the transition equation.
 %        F is an Nz?Nz matrix for a time-invariant transition matrix in the transition equation.
@@ -132,17 +112,17 @@ function [L,zend,Pend,varargout] = ...
   for t = 1:capT
 
     %% Handle missing observations
-    
-    % if an element of the vector y_t is missing (NaN) for
-    % the observation t, the corresponding row is ditched
-    % from the measurement equation.
-    not_nan = ~isnan(data(t,:));
-    Ny_t = length(data_t);
-    
-    data_t = data(t,not_nan);
-    M_t = M(not_nan,:); 
-    Q_t = Q(not_nan,not_nan);
-    D_t = D(not_nan);
+      
+      % if an element of the vector y_t is missing (NaN) for
+      % the observation t, the corresponding row is ditched
+      % from the measurement equation.
+      not_nan = ~isnan(data(:,t));
+      Ny_t = length(data_t);
+      
+      data_t = data(not_nan,t);
+      M_t = M(not_nan,:); 
+      Q_t = Q(not_nan,not_nan);
+      D_t = D(not_nan);
 
     %% From Filtered to Forecast values
     s  = C + T*s;           % mu_{t|t} -> mu_{t+1|t}
@@ -150,41 +130,26 @@ function [L,zend,Pend,varargout] = ...
     y  = D_t + M_t*s;       % E_t[y_{t+1}]
     yy = M_t*ss*M_t' + Q_t; % Var_t[y_{t+1}]
 
+    %% Save forecasts
+    s_pred(:,t)    = s;
+    s_vpred(:,:,t) = ss;
+    y_pred(:,t)    = y;
+    y_vpred(:,:,t) = yy;
+
     %% Update: From Forecast to Filtered
-    err = data_t - y;
-    Mss = M_t*ss;
-    s  = s + Mss'*(yy\err);
-    ss = ss - Mss*(yy\Mss); 
+    err = data_t - y;     
+    Mss = M_t*ss;           
+    s  = s + Mss'*(yy\err); % mu_{t+1|t} -> mu_{t+1|t+1} 
+    ss = ss - Mss*(yy\Mss); % Sigma_{t+1|t} -> Sigma_{t+1|t+1}
 
-    if nout > 3
-      pred(:,t) = z;
-      vpred(:,:,t) = P;
-      if nout> 7
-        yprederror(notis_nan,t) = dy;
-        ystdprederror(notis_nan,t) = dy./sqrt(diag(D));
-      end
-    end
-
-%     if det(D) < 10^(-4)
-%         keyboard;
-%     end
-    ddy = D\dy;
-    L = L-.5*log(det(D))-.5*dy'*ddy-.5*Ny_t*log(2*pi);
+    %% Save filtering information
+    y_prederr(:,t) = err;
+    s_filt(:,t)    = s;
+    s_vfilt(:,:,t) = ss;
     
-    
-    %% updating
-    PHG = (P*H_t'+G_t);
-    z = z+PHG*ddy;
-    P = P-PHG/D*PHG';
-
-
-    if nout > 5
-      filt(:,t) = z;
-      vfilt(:,:,t) = P;
-    end
   end
-  zend = z;
-  Pend = P;
+  s_end = s;
+  ss_end = ss;
   
   if nout > 3
     varargout(1) = {pred};
