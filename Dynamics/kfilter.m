@@ -1,34 +1,47 @@
-function [L,zend,Pend,varargout] = kfilter(data, lead, C, T, R, D, M, Q, M, G, W, s, P)
+function [L,zend,Pend,varargout] = ...
+  kfilter(data, m_fwd, C, T, R, D, M, Q, s, P, tv)
 %
-% More generally, this program is adapted from kalcvf2NaN, which is designed to
-% deal with missing data, which MUST correspond to NaN in the 'data' matrix if
-% an element of the vector y(t) is missing (NaN) for the observation t, the
-% corresponding row is ditched from the measurement equation.
+% Kalman Filter programming that accommodates:
+% 1. Missing Data: Must be marked by a NaN in the data matrix.
+%    if so, then the corresponding row in the measurement
+%    equation will be removed. 
+% 2. Time-Varying Matrices: For all arrays that define the
+%    transition and measurement equations, we first check if
+%    there is a third dimension. If yes, then that third
+%    dimension is assumed to index time. All checks are done
+%    for the matrices individually, so you could have a
+%    time-varying T, but a non-time-varying M, for example.
 %
-% DG 4/9/10
-%
-% State Space Model and Components
+%    NOTE: A matrix in the t-th location (in the third dimension
+%    of the array) is assumed to be the matrix that is relevant
+%    for the transition equation that gets the state from time
+%    t-1 to t, or for the measurment equation that relates y_t
+%    to s_t.
+% 
+% State Space Model Represention
 %
 %   s_t = C + T*s_{t-1} + R*e_t (state or transition equation)
 %   y_t = D + M*s_t + Q*eta_t   (observation or measurement equation)
 %
-%   The inputs to the function are as follows:
-%     data is a Ny x T matrix containing data (y(1), ... , y(T)).
-%     lead is the number of steps to forecast after the end of the data.
-%        a is an Nz?1 vector for a time-invariant input vector in the transition equation.
-%        F is an Nz?Nz matrix for a time-invariant transition matrix in the transition equation.
-%        b is an Ny?1 vector for a time-invariant input vector in the measurement equation.
-%        H is an Ny?Nz matrix for a time-invariant measurement matrix in the measurement equation.
-%        R is an Nz x Nshocks matrix that translates the exogenous shocks
-%           into states in the transition equation
-%        Q is the Nshocks x Nshocks covariance matrix of the exogenous
-%           shocks eta_t
-%        M is the Ny x Ny covariance matrix of the measurement error
-%           epsilon_t
-%        G is the Nz x Ny covariance matrix of R*eta_t and epsilon_t
-%        W is the Nz x T matrix of time-varying volatility adjustments
-%        z is an optional Nz?1 initial state vector.
-%        P is an optional Nz?Nz covariance matrix of an initial state vector.
+% Function arguments:
+%   data  (Ny x capT) matrix containing data (y(1),...,y(capT))'
+%   m_fwd The number of steps to forecast after the end of the
+%            data, i.e. you forecast to capT+m
+%   C     (Ns x 1) column vector representing the constant terms
+%           in the transition equation
+%   T     (Ns x Ns) transition matrix
+%   R     (Ns x Ns) covariance matrix for exogenous shocks e_t
+%           in the transition equation
+%   D     (Ny x 1) vector for constant terms in the measurement
+%           equation
+%   M     (Ny x Ns) matrix for the measurement equation.
+%   Q     (Ny x Ny) covariance matrix for the exogenous shocks
+%           eta_t in the measurment equation
+%   z is an optional Nz?1 initial state vector.
+%   P is an optional Nz?Nz covariance matrix of an initial state vector.
+%   tv    A indicator for whether or not 1 or more matrices in
+%           the state transition or measurement equation are
+%           time varying. If not, save some computational costs
 %
 %   The KALCVF function returns the following output:
 %     logl is a value of the average log likelihood function of the SSM
@@ -49,47 +62,51 @@ function [L,zend,Pend,varargout] = kfilter(data, lead, C, T, R, D, M, Q, M, G, W
 %   and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
 %
 %   This is a M-file for MATLAB.
-%   Copyright 2002-2003 Federal Reserve Bank of Atlanta
-%   $Revision: 1.2 $  $Date: 2003/03/19 19:16:17 $
-%   Iskander Karibzhanov 5-28-02.
-%   Master of Science in Computational Finance
-%   Georgia Institute of Technology
-%==========================================================================
-% Revision history:
-%
-%  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
-%
+%   Adapted from code of Iskander Karibzhanov 5-28-02.
 %==========================================================================
 
   capT = size(data,2);
   Ns   = size(C,1);
   Ny   = size(D,1);
 
-  if nin~=13
-    error('Thirteen input arguments required.')
-  end
-
   nout = nargout;
 
-  % Check input matrix dimensions
+  %% Check input matrix dimensions
   if size(C,2) ~= 1, error('C must be column vector') end
   if size(D,2) ~= 1, error('D must be column vector') end
-  if size(data,2) ~= Ny, 
-    error('Data and D must have the same number of columns')
+  if size(data,2) ~= Ny
+    error('Data and D must have the same number of rows')
   end
-  if any(size(T) ~= [Ns Ns])
+  if any([size(T,1), size(T,2)] ~= [Ns Ns])
     error('Transition matrix, T, must be square')
   end
-  if any(size(M) ~= [Ny Ns])
+  if any([size(M,1) size(M,2)] ~= [Ny Ns])
     error('M must be Ny by Ns matrix')
   end
-  if any(size(s)~=[Ns 1])
-    error('s0 must be column vector of length Nz')
+  if size(T,1) ~= Ns
+    error('T and C must have the same number of rows')
   end
-  if any(size(P)~=[Ns Ns])
-    error('s0 must be Ns by Ns matrix') end
+  if any(size(s) ~= [Ns 1])
+    error('s0 must be column vector of length Ns')
+  end
+  if any(size(ss,1) ~= [Ns Ns])
+    error('ss0 must be Ns by Ns matrix') end
+  if any(R ~= diag(diag(R)))
+      error('R must be a diagonal matrix')
+  end
   if any(Q ~= diag(diag(Q)))
       error('Q must be a diagonal matrix')
+  end
+
+  %% Check which matrices/arrays are time-varying
+  if tv
+    matsnames = {'C', 'T', 'R', 'D', 'M', 'Q'};
+    matscell  = {C, T, R, D, M, Q};
+    tv_inds = find(cellfun(@(m) ndims(m) > 2, mats, ...
+                   'UniformOuput', true));
+    for mt = 1:length(matsnames)
+      mats.(matsnames{mt}) = matscell{mt};
+    end
   end
 
   if nout>3
@@ -105,11 +122,12 @@ function [L,zend,Pend,varargout] = kfilter(data, lead, C, T, R, D, M, Q, M, G, W
     end
   end
  
+  % Log likelihood
   L = 0;
   
-  qdiag = sqrt(diag(Q));
-
   for t = 1:capT
+
+    
 
     %% Handle missing observations
       
@@ -136,8 +154,12 @@ function [L,zend,Pend,varargout] = kfilter(data, lead, C, T, R, D, M, Q, M, G, W
     y_pred(:,t)    = y;
     y_vpred(:,:,t) = yy;
 
-    %% Update: From Forecast to Filtered
+    %% Evaluate the likelihood p(y_t | I_{t-1},C,T,Q,D,M,R)
     err = data_t - y;     
+    L = L - 0.5*Ny_t*log(2*pi) - 0.5*log(det(yy)) ...
+        - 0.5*err'*(yy\err);
+
+    %% From Forecast to Filtered
     Mss = M_t*ss;           
     s  = s + Mss'*(yy\err); % mu_{t+1|t} -> mu_{t+1|t+1} 
     ss = ss - Mss*(yy\Mss); % Sigma_{t+1|t} -> Sigma_{t+1|t+1}
