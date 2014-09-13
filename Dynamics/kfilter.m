@@ -11,8 +11,7 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %    time. All checks are done for the matrices individually, so you
 %    could have a time-varying T, but a non-time-varying M, for example.
 %
-%    NOTE: A matrix in the t-th location (in the third dimension of the
-%    array) is assumed to be the matrix that is relevant for the
+%    NOTE: A matrix in the t-th location (in the third dimension of the %    array) is assumed to be the matrix that is relevant for the
 %    transition equation that gets the state from time t-1 to t, or for
 %    the measurement equation that relates y_t to s_t.
 % 
@@ -71,10 +70,10 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %     time-varying matrices.
 %=======================================================================
 
+  %% Basic parameters; determine sizing and loops; used often
   capT = size(data,2);
   Ns   = size(C,1);
   Ny   = size(D,1);
-
   nout = nargout;
 
   %% Check input matrix dimensions
@@ -104,8 +103,7 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
     error('Q must be a diagonal matrix')
   end
 
-  %% Check which matrices/arrays are time-varying; Store all matrices in
-  %  structure
+  %% Check if mats/arrays are time-varying; store all mats in structure
   if tv
     mats = struct('C', C, ...
                   'T', T, ...
@@ -134,21 +132,15 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
   end
 
   % Pre-Allocate matrices
-  nout = nargin;
-  %s_filt = 
+  s_filt    = nan(Ns, capT);
+  ss_filt   = nan(Ns, Ns, capT);
+  y_prederr = nan(Ny, capT);
 
-  
-  if nout>3
-    pred = zeros(Nz,T);
-    vpred = zeros(Nz,Nz,T);
-    if nout > 5
-        filt = zeros(Nz,T);
-        vfilt = zeros(Nz,Nz,T);
-        if nout > 7
-            yprederror = NaN*zeros(Ny,T);
-            ystdprederror = NaN*zeros(Ny,T);
-        end
-    end
+  if nout > 6 
+    y_pred  = nan(Ny, capT);
+    yy_pred = nan(Ny, Ny, capT);
+    s_pred  = nan(Ns, capT);
+    ss_pred = nan(Ns, Ns, capT);
   end
  
   % Log likelihood
@@ -213,20 +205,16 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
   end
   s_end = s;
   ss_end = ss;
-  
-  if nout > 3
-    varargout(1) = {pred};
-    varargout(2) = {vpred};
-    if nout>5
-        varargout(3) = {filt};
-        varargout(4) = {vfilt};
-        if nout > 7   
-          varargout(5) = {yprederror};
-          varargout(6) = {ystdprederror};
-          varargout(7) = {sqrt(mean(yprederror.^2,2))'};
-          varargout(8) = {sqrt(mean(ystdprederror.^2,2))'};
-        end
-    end
+
+  if nout > 6
+    varargout(1) = {y_pred};
+    varargout(2) = {yy_pred};
+    varargout(3) = {s_pred};
+    varargout(4) = {ss_pred};
   end
+
+
+
+end  
 
 
