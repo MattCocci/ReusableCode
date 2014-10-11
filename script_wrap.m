@@ -29,7 +29,7 @@ if iscell(script)
   end
 else
   eval(script);
-end
+end 
 
 %% Check if there are items to be returned and return them
 if nargin > 1
