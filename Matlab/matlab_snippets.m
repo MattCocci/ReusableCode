@@ -1,3 +1,9 @@
+% Functional Programming Constructs
+map = @(fcns, vals) cellfun(@(f) f(vals{:}), fcns);
+mapc = @(fcns, vals) cellfun(@(f) f(vals{:}), fcns, 'UniformOutput', false);
+iif = @(varargin) varargin{2*find([varargin{1:2:end}], 1, 'first')}(); 
+paren = @(x, varargin) x(varargin{:});
+curly = @(x, varargin) x{varargin{:}};
 
 % NaN out a series, x, up until we hit the nth elelemt of x
 nan_before_n = @(x, n) [nan(n-1, 1); x(n:end)];
