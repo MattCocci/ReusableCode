@@ -1,17 +1,18 @@
-function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
-  kfilter(data, m_fwd, C, T, R, D, M, Q, s, ss, tv)
+function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
 %
 % Kalman Filter programming that accommodates:
 % 1. Missing Data: Must be marked by a NaN in the data matrix.  if so,
 %    then the corresponding row in the measurement equation will be
 %    removed. 
-% 2. Time-Varying Matrices: For all arrays that define the transition
-%    and measurement equations, we first check if there is a third
-%    dimension. If yes, then that third dimension is assumed to index
-%    time. All checks are done for the matrices individually, so you
-%    could have a time-varying T, but a non-time-varying M, for example.
+% 2. Time-Varying Matrices: If the indicator tv=1 (denoting that one of
+%    the state transition or measurement equation matrices is
+%    time-varying) we check all matrices for a third dimension (assumed
+%    to index time) and pull use the relevant time t matrices.  All
+%    checks are done for the matrices individually, so you could have a
+%    time-varying T, but a non-time-varying M, for example.
 %
-%    NOTE: A matrix in the t-th location (in the third dimension of the %    array) is assumed to be the matrix that is relevant for the
+%    NOTE: A matrix in the t-th location (in the third dimension of the
+%    array) is assumed to be the matrix that is relevant for the
 %    transition equation that gets the state from time t-1 to t, or for
 %    the measurement equation that relates y_t to s_t.
 % 
@@ -21,8 +22,6 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %
 % Function arguments:
 %   data    (Ny x capT) matrix containing data (y(1),...,y(capT))'
-%   m_fwd   The number of steps to forecast after the end of the data,
-%             i.e. you forecast to capT+m
 %   C       (Ns x 1) column vector representing the constant terms in
 %             the transition equation
 %   T       (Ns x Ns) transition matrix
@@ -33,14 +32,15 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %   M       (Ny x Ns) matrix for the measurement equation.
 %   Q       (Ny x Ny) covariance matrix for the exogenous shocks eta_t
 %             in the measurment equation
-%   s       (Nz x 1) initial state vector.
-%   ss      (Nz x Nz) covariance matrix for initial state vector
+%   s0      (Nz x 1) initial state vector.
+%   ss0     (Nz x Nz) covariance matrix for initial state vector
 %   tv      A indicator for whether or not 1 or more matrices in the
 %           state transition or measurement equation are time varying.
-%           
+%   fullout Indicator for whether to return the full gamut of output
+%           (notably information about the updating procedure)
 %
-% Required Output: Required because these are required for the Kalman
-% Smoother, so you'll probably want them.
+% Automatic Output: Always returned because these are required for the
+% Kalman Smoother, so you'll probably want them. Returned in a struct.
 %
 %   L           Likelihood, provided that the errors are normally
 %                 distributed
@@ -49,12 +49,11 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %   s_filt      (Ns x t) matrix consisting of the filtered states
 %   ss_filt     (Ns x Ns x t) array consisting of the filtered
 %                 covariance matrices
-%   y_prederr   (Ny x t) matrix consisting of the prediction error
+%   y_prederr   (Ny x t) matrix consisting of the prediction error %
 %
-%
-% Optional Output: Optional because they can be used to illustrate the
-% updating procedure over time. But they aren't as important as the
-% required output.
+% Optional Output: Returned if fullout = 1. Optional because they can be
+% used to illustrate the updating procedure over time. But they aren't
+% as important as the required output. 
 %
 %   y_pred      (Ny x t) matrix consisting of the y_{t+1|t}
 %   yy_pred     (Ny x Ny x t) array consisting of the covariance matrix
@@ -64,44 +63,32 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 %                 for s_{t+1|t}
 %
 %   This is a M-file for MATLAB.
-%   - Adapted from kalcvf.m code of Iskander Karibzhanov 5-28-02.
+%   - This Kalman Filter code is adapted from that of the FRBNY DSGE
+%     model code (September 2014, Liberty Street Economics). That, in
+%     turn, built upon  kalcvf.m by Iskander Karibzhanov 5-28-02.
 %   - Additions include a different characterization of the state
 %     transition and measurement equations, plus a way to handle
-%     time-varying matrices.
+%     time-varying matrices and a slightly different setup.
+%
 %=======================================================================
 
   %% Basic parameters; determine sizing and loops; used often
   capT = size(data,2);
-  Ns   = size(C,1);
-  Ny   = size(D,1);
+  Ns   = size(C,1); % num states
+  Ny   = size(D,1); % num observables
   nout = nargout;
 
   %% Check input matrix dimensions
-  if size(C,2) ~= 1, error('C must be column vector') end
-  if size(D,2) ~= 1, error('D must be column vector') end
-  if size(data,2) ~= Ny
-    error('Data and D must have the same number of rows')
-  end
-  if any([size(T,1), size(T,2)] ~= [Ns Ns])
-    error('Transition matrix, T, must be square')
-  end
-  if any([size(M,1) size(M,2)] ~= [Ny Ns])
-    error('M must be Ny by Ns matrix')
-  end
-  if size(T,1) ~= Ns
-    error('T and C must have the same number of rows')
-  end
-  if any(size(s) ~= [Ns 1])
-    error('s0 must be column vector of length Ns')
-  end
-  if any(size(ss,1) ~= [Ns Ns])
-    error('ss0 must be Ns by Ns matrix') end
-  if any(R ~= diag(diag(R)))
-    error('R must be a diagonal matrix')
-  end
-  if any(Q ~= diag(diag(Q)))
-    error('Q must be a diagonal matrix')
-  end
+  if size(C,2) ~= 1,     error('C must be column vector'); end
+  if size(D,2) ~= 1,     error('D must be column vector'); end
+  if size(data,2) ~= Ny, error('Data and D must imply the same number of observables'); end
+  if size(T,1) ~= Ns,    error('T and C must imply the same number of states'); end
+
+  if any(size(s0) ~= [Ns 1]),     error('s0 must be column vector of length Ns'); end
+  if any(size(ss0,1) ~= [Ns Ns]), error('ss0 must be Ns x Ns matrix'); end
+
+  if any([size(T,1) size(T,2)] ~= [Ns Ns]),  error('Transition matrix, T, must be square'); end
+  if any([size(M,1) size(M,2)] ~= [Ny Ns]),  error('M must be Ny by Ns matrix'); end
 
   %% Check if mats/arrays are time-varying; store all mats in structure
   if tv
@@ -114,7 +101,7 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
     matsnames = fieldnames(mats);
 
     % number of elements along 3rd or t dimension
-    tdim_els  = arrayfun(@(mt) size(mats.(matsnames{mt}), 3), 1:length(matsnames));
+    tdim_els = cellfun(@(mt) size(mats.(mt), 3), matsnames);
 
     % Which indices are time varying
     tv_inds = find(tdim_els > 1);
@@ -124,24 +111,28 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
     if ~isempty(too_small)
       err1 = ...
         sprintf(['The following matrices have a 3rd dimension, ' ...
-          'indicating time varying.\n However, they are not the ' ...
-          'right size, as size(mat, 3) ~= T.\n']);
+                 'indicating time varying.\n However, they are not the ' ...
+                 'right size, as size(mat, 3) ~= capT.\n']);
       err2 = sprintf('%s ', matsnames{too_small});
       error([err1 err2])
     end
   end
 
   % Pre-Allocate matrices
-  s_filt    = nan(Ns, capT);
-  ss_filt   = nan(Ns, Ns, capT);
-  y_prederr = nan(Ny, capT);
+  KF.s_filt    = nan(Ns, capT);
+  KF.ss_filt   = nan(Ns, Ns, capT);
+  KF.y_prederr = nan(Ny, capT);
 
-  if nout > 6 
-    y_pred  = nan(Ny, capT);
-    yy_pred = nan(Ny, Ny, capT);
-    s_pred  = nan(Ns, capT);
-    ss_pred = nan(Ns, Ns, capT);
+  if fullout
+    KF.s_pred  = nan(Ns, capT);
+    KF.ss_pred = nan(Ns, Ns, capT);
+    KF.y_pred  = nan(Ny, capT);
+    KF.yy_pred = nan(Ny, Ny, capT);
   end
+
+  % Set up initial state vector and cov matrix
+  s  = s0;
+  ss = ss0;
  
   % Log likelihood
   L = 0;
@@ -152,13 +143,15 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
   % way more readable than T(:,:,t)*s everywhere for all matrices in the
   % procedure; plus, now we don't have to set up 3D matrices for
   % non-time-varying stuff
-  asgn = @(variable,val,t) assignin('caller', variable, val(:,:,t))
+  asgn = @(var,val,t) assignin('caller', var, val(:,:,t))
   
   for t = 1:capT
 
     % If time varying, assign out the time time t matrix
-    for mt = tv_inds
-      asgn(matsnames{mt}, idx_t(mats.matsnames{mt}), t)
+    if tv
+      for mt = tv_inds
+        asgn(matsnames{mt}, idx_t(mats.matsnames{mt}), t)
+      end
     end
 
     %% Handle missing observations
@@ -167,12 +160,12 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
       % the observation t, the corresponding row is ditched
       % from the measurement equation.
       not_nan = ~isnan(data(:,t));
-      Ny_t = length(data_t);
+      Ny_t    = length(data_t);
       
-      data_t = data(not_nan,t);
-      M_t = M(not_nan,:); 
-      Q_t = Q(not_nan,not_nan);
-      D_t = D(not_nan);
+      data_t  = data(not_nan,t);
+      M_t     = M(not_nan,:); 
+      Q_t     = Q(not_nan,not_nan);
+      D_t     = D(not_nan);
 
     %% From Filtered to Forecast values
     s  = C + T*s;           % mu_{t|t} -> mu_{t+1|t}
@@ -181,11 +174,12 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
     yy = M_t*ss*M_t' + Q_t; % Var_t[y_{t+1}]
 
     %% Save forecasts
-    
-    s_pred(:,t)    = s;
-    ss_pred(:,:,t) = ss;
-    y_pred(:,t)    = y;
-    yy_pred(:,:,t) = yy;
+    if fullout
+      KF.s_pred(:,t)    = s;
+      KF.ss_pred(:,:,t) = ss;
+      KF.y_pred(:,t)    = D + M*s;     % <- Compute forecasts for all obs, 
+      KF.yy_pred(:,:,t) = M*ss*M' + Q; % <- not just the non-missing ones
+    end
 
     %% Evaluate the likelihood p(y_t | I_{t-1},C,T,Q,D,M,R)
     err = data_t - y;     
@@ -194,26 +188,19 @@ function [L, s_end, ss_end, s_filt, ss_filt, y_prederr, varargout] = ...
 
     %% From Forecast to Filtered
     Mss = M_t*ss;           
-    s  = s + Mss'*(yy\err); % mu_{t+1|t} -> mu_{t+1|t+1} 
-    ss = ss - Mss*(yy\Mss); % Sigma_{t+1|t} -> Sigma_{t+1|t+1}
+    s   = s + Mss'*(yy\err); % mu_{t+1|t} -> mu_{t+1|t+1} 
+    ss  = ss - Mss*(yy\Mss); % Sigma_{t+1|t} -> Sigma_{t+1|t+1}
 
     %% Save filtering information
-    y_prederr(:,t) = err;
-    s_filt(:,t)    = s;
-    ss_filt(:,:,t) = ss;
+    KF.y_prederr(:,t) = err;
+    KF.s_filt(:,t)    = s;
+    KF.ss_filt(:,:,t) = ss;
     
   end
-  s_end = s;
-  ss_end = ss;
 
-  if nout > 6
-    varargout(1) = {y_pred};
-    varargout(2) = {yy_pred};
-    varargout(3) = {s_pred};
-    varargout(4) = {ss_pred};
-  end
-
-
+  KF.L      = L;
+  KF.s_end  = s;
+  KF.ss_end = ss;
 
 end  
 
