@@ -1,15 +1,14 @@
-function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
-%
+function [ L, KF ] = kfilter(data, sysmats, s0, ss0, fullout)
+
 % Kalman Filter programming that accommodates:
-% 1. Missing Data: Must be marked by a NaN in the data matrix.  if so,
+% 1. Missing Data: Must be marked by a NaN in the data matrix.  If so,
 %    then the corresponding row in the measurement equation will be
-%    removed. 
-% 2. Time-Varying Matrices: If the indicator tv=1 (denoting that one of
-%    the state transition or measurement equation matrices is
-%    time-varying) we check all matrices for a third dimension (assumed
-%    to index time) and pull use the relevant time t matrices.  All
-%    checks are done for the matrices individually, so you could have a
-%    time-varying T, but a non-time-varying M, for example.
+%    removed for that time period. 
+% 2. Time-Varying Matrices: We check up front for time variation in the
+%    system matrices. We check all matrices for a third dimension
+%    (assumed to index time) and pull use the relevant time t matrices.
+%    All checks are done for the matrices individually, so you could
+%    have a time-varying T, but a non-time-varying M, for example.
 %
 %    NOTE: A matrix in the t-th location (in the third dimension of the
 %    array) is assumed to be the matrix that is relevant for the
@@ -21,17 +20,18 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
 %   y_t = D + M*s_t + Q*eta_t   (observation or measurement equation)
 %
 % Function arguments:
-%   data    (Ny x capT) matrix containing data (y(1),...,y(capT))'
-%   C       (Ns x 1) column vector representing the constant terms in
+%   data      (Ny x capT) matrix containing data (y(1),...,y(capT))'
+%   sysmats   Struct that holds the system matrices. Must have fields
+%     C       (Ns x 1) column vector representing the constant terms in
 %             the transition equation
-%   T       (Ns x Ns) transition matrix
-%   R       (Ns x Ns) covariance matrix for exogenous shocks e_t in the
-%             transition equation
-%   D       (Ny x 1) vector for constant terms in the measurement
-%             equation
-%   M       (Ny x Ns) matrix for the measurement equation.
-%   Q       (Ny x Ny) covariance matrix for the exogenous shocks eta_t
-%             in the measurment equation
+%     T       (Ns x Ns) transition matrix
+%     R       (Ns x Ns) covariance matrix for exogenous shocks e_t in
+%               the transition equation
+%     D       (Ny x 1) vector for constant terms in the measurement
+%               equation
+%     M       (Ny x Ns) matrix for the measurement equation.
+%     Q       (Ny x Ny) covariance matrix for the exogenous shocks eta_t
+%               in the measurment equation
 %   s0      (Nz x 1) initial state vector.
 %   ss0     (Nz x Nz) covariance matrix for initial state vector
 %   tv      A indicator for whether or not 1 or more matrices in the
@@ -39,11 +39,12 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
 %   fullout Indicator for whether to return the full gamut of output
 %           (notably information about the updating procedure)
 %
-% Automatic Output: Always returned because these are required for the
-% Kalman Smoother, so you'll probably want them. Returned in a struct.
-%
+% Automatic Output: Just the likelihood in the event that you are
+% simplying mode finding.
 %   L           Likelihood, provided that the errors are normally
 %                 distributed
+%
+% Optional Output (if nargout > 1):
 %   s_end       Final filtered state vector 
 %   ss_end      Covariance matrix for the final filtered state vector
 %   s_filt      (Ns x t) matrix consisting of the filtered states
@@ -51,9 +52,9 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
 %                 covariance matrices
 %   y_prederr   (Ny x t) matrix consisting of the prediction error %
 %
-% Optional Output: Returned if fullout = 1. Optional because they can be
-% used to illustrate the updating procedure over time. But they aren't
-% as important as the required output. 
+% Optional Output (if nargout > 1 & fullout==1): Optional because they
+% can be used to illustrate the updating procedure over time. But they
+% aren't as important as the optional output above.
 %
 %   y_pred      (Ny x t) matrix consisting of the y_{t+1|t}
 %   yy_pred     (Ny x Ny x t) array consisting of the covariance matrix
@@ -72,36 +73,37 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
 %
 %=======================================================================
 
+  %% Make sure you have all of the matrices you need
+  matsnames = ['C'; 'T'; 'R'; 'D'; 'M'; 'Q'];
+  matsmiss  = setdiff(matsnames, cell2mat(fieldnames(symats)));
+  if ~isempty(matsmiss)
+    matsmiss  = arrayfun(@(s) [s, ','], matsmiss, 'UniformOutput', false);
+    error(['Missing matrices: ', sprintf('%s', matsmiss{:})]);
+  end
+
+
   %% Basic parameters; determine sizing and loops; used often
   capT = size(data,2);
-  Ns   = size(C,1); % num states
-  Ny   = size(D,1); % num observables
+  Ns   = size(sysmats.C,1); % num states
+  Ny   = size(sysmats.D,1); % num observables
   nout = nargout;
 
   %% Check input matrix dimensions
-  if size(C,2) ~= 1,     error('C must be column vector'); end
-  if size(D,2) ~= 1,     error('D must be column vector'); end
-  if size(data,2) ~= Ny, error('Data and D must imply the same number of observables'); end
-  if size(T,1) ~= Ns,    error('T and C must imply the same number of states'); end
+  if size(sysmats.C,2) ~= 1,  error('C must be column vector'); end
+  if size(sysmats.D,2) ~= 1,  error('D must be column vector'); end
+  if size(data,2) ~= Ny,      error('Data and D must imply the same number of observables'); end
+  if size(sysmats.T,1) ~= Ns, error('T and C must imply the same number of states'); end
 
   if any(size(s0) ~= [Ns 1]),     error('s0 must be column vector of length Ns'); end
   if any(size(ss0,1) ~= [Ns Ns]), error('ss0 must be Ns x Ns matrix'); end
 
-  if any([size(T,1) size(T,2)] ~= [Ns Ns]),  error('Transition matrix, T, must be square'); end
-  if any([size(M,1) size(M,2)] ~= [Ny Ns]),  error('M must be Ny by Ns matrix'); end
+  if any([size(sysmats.T,1) size(sysmats.T,2)] ~= [Ns Ns]),  error('Transition matrix, T, must be square'); end
+  if any([size(sysmats.M,1) size(sysmats.M,2)] ~= [Ny Ns]),  error('M must be Ny by Ns matrix'); end
 
-  %% Check if mats/arrays are time-varying; store all mats in structure
-  if tv
-    mats = struct('C', C, ...
-                  'T', T, ...
-                  'R', R, ...
-                  'D', D, ...
-                  'M', M, ...
-                  'Q', Q)
-    matsnames = fieldnames(mats);
+  %% Check if mats/arrays are time-varying
 
     % number of elements along 3rd or t dimension
-    tdim_els = cellfun(@(mt) size(mats.(mt), 3), matsnames);
+    tdim_els = arrayfun(@(mt) size(sysmats.(mt), 3), matsnames);
 
     % Which indices are time varying
     tv_inds = find(tdim_els > 1);
@@ -113,10 +115,9 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
         sprintf(['The following matrices have a 3rd dimension, ' ...
                  'indicating time varying.\n However, they are not the ' ...
                  'right size, as size(mat, 3) ~= capT.\n']);
-      err2 = sprintf('%s ', matsnames{too_small});
+      err2 = sprintf('%s ', matsnames(too_small));
       error([err1 err2])
     end
-  end
 
   % Pre-Allocate matrices
   KF.s_filt    = nan(Ns, capT);
@@ -148,10 +149,8 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
   for t = 1:capT
 
     % If time varying, assign out the time time t matrix
-    if tv
-      for mt = tv_inds
-        asgn(matsnames{mt}, idx_t(mats.matsnames{mt}), t)
-      end
+    for mt = tv_inds
+      asgn(matsnames(mt), idx_t(sysmats.matsnames(mt)), t)
     end
 
     %% Handle missing observations
@@ -201,6 +200,7 @@ function [ KF ] = kfilter(data, C, T, R, D, M, Q, s0, ss0, tv, fullout)
   KF.L      = L;
   KF.s_end  = s;
   KF.ss_end = ss;
+
 
 end  
 
