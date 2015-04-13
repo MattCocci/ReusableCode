@@ -10,7 +10,7 @@ Implements the Kalman filter for the state space model
     x_{t+1} = A x_t + w_{t+1}
     y_t = G x_t + v_t.
 
-Here x_t is the hidden state and y_t is the measurement.  The shocks {w_t} 
+Here x_t is the hidden state and y_t is the measurement.  The shocks {w_t}
 and {v_t} are iid zero mean Gaussians with covariance matrices Q and R
 respectively.
 """
@@ -30,10 +30,10 @@ class Kalman:
 
         Measurement Equation:
             y_t = G x_t + v_t               (v_t ~ N(0, R))
-        
+
         Parameters
         ============
-        
+
         All arguments should be Python scalars or NumPy ndarrays.
 
             * A is n x n
@@ -50,7 +50,7 @@ class Kalman:
     def set_state(self, x_hat, Sigma):
         """
         Set the state, which is the mean x_hat and covariance matrix Sigma of
-        the prior/predictive density.  
+        the prior/predictive density.
 
             * x_hat is n x 1
             * Sigma is n x n and positive definite
@@ -65,7 +65,7 @@ class Kalman:
         Updates the moments (x_hat, Sigma) of the time t prior to the time t
         filtering distribution, using current measurement y_t.  The parameter
         y should be a Python scalar or NumPy array.  The updates are according
-        to 
+        to
 
             x_hat^F = x_hat + Sigma G' (G Sigma G' + R)^{-1}(y - G x_hat)
             Sigma^F = Sigma - Sigma G' (G Sigma G' + R)^{-1} G Sigma
