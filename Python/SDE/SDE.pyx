@@ -38,13 +38,14 @@ class Discretize:
 
   def Taylor15(self, float Xt, float dt, float dW, float dZ):
     return (
-      self.MilsteinStep(Xt, dt, dW)
-      + (0.5)*(self.b*self.db + 0.5*(self.s**2)*self.ddb)*(dt**2)
-      + self.s * self.db * dZ
-      + (self.b*self.ds + 0.5*(self.s**2)*self.dds)*(dt*dW-dZ)
-      + 0.5*((self.s**2)*self.dds + self.s*(self.ds**2))
-        * (1/3.)*((dW**2)-dt)*dW
+        Xt + self.b(Xt)*dt + self.s(Xt)*dW
+        + 0.5*self.s(Xt)*self.ds(Xt)*(dW**2-dt)
+        + (0.5)*(self.b(Xt)*self.db(Xt) + 0.5*(self.s(Xt)**2)*self.ddb(Xt))*(dt**2)
+        + self.s(Xt) * self.db(Xt) * dZ
+        + (self.b(Xt)*self.ds(Xt) + 0.5*(self.s(Xt)**2)*self.dds(Xt))*(dt*dW-dZ)
+        + 0.5*((self.s(Xt)**2)*self.dds(Xt) + self.s(Xt)*(self.ds(Xt)**2)) * ((1/3.)*(dW**2)-dt)*dW
       )
+
 
   def SimulatePaths(self, methods, float x0, float t0, float T, float dt, int analytical=0):
 
@@ -54,23 +55,37 @@ class Discretize:
       assert self.soln != None, \
         'No analytical solution given at initialization; cannot compute.'
 
+    # If the derivative of the diffusion term is zero, kill Milstein or
+    # replace with EM since the methods will be the same
+    cdef int milstein_loc
+    if 'Milstein' in methods and self.ds_sym == 0:
+      milstein_loc = methods.index('Milstein')
+      if 'EM' not in methods:
+        methods[milstein_loc] = 'EM'
+        msg = 'Replacing Milstein method with EM'
+      else:
+        methods[milstein_loc:milstein_loc+1] = []
+        msg = 'Killing Milstein method'
+      print 'Diffusion term is additive, so simpler EM will equal Milstein.'
+      print msg
+
+    # Determine if we'll need to draw another RV for Taylor 1.5 method
+    cdef int drawdim = 1
+    if 'Taylor15' in methods:
+      drawdim = 2
+
     # Initialize parameters and X matrix to hold simulated paths
-    cdef np.ndarray P = np.arange(t0, T, dt, dtype=DTYPE) # Left endpoints of subintervals
+    cdef np.ndarray[DTYPE_t, ndim=1] P = np.arange(t0, T, dt, dtype=DTYPE) # Left endpoints of subintervals
     cdef int nsteps   = len(P)        # Number of subintervals/steps we'll take
     cdef int nmethods = len(methods)  # Number of methods
     cdef np.ndarray X = np.vstack( (x0*np.ones(nmethods, dtype=DTYPE),
                     np.nan*np.ones((nsteps,nmethods), dtype=DTYPE)) )
 
-    # Determine if we'll need to draw another RV for Taylor 1.5 method
-    cdef int dim = 1
-    if 'Taylor15' in methods:
-      dim = 2
-
     # Set up mean and cov vectors for draws
-    cdef np.ndarray mean = np.zeros(dim, dtype=DTYPE)
-    cdef np.ndarray cov  = np.zeros((dim,dim), dtype=DTYPE)
+    cdef np.ndarray mean = np.zeros(drawdim, dtype=DTYPE)
+    cdef np.ndarray cov  = np.zeros((drawdim,drawdim), dtype=DTYPE)
     cdef int zind = 0
-    if dim > 1:
+    if drawdim > 1:
       cov  = np.array([ [dt,     0.5*dt],
                         [0.5*dt, (1/3.)*(dt**3)] ])
       zind = 0
@@ -85,7 +100,7 @@ class Discretize:
     for t in range(nsteps):
       X[t+1,:] = map(lambda m:
                       getattr(self, methods[m])( X[t,m], dt, draws[t,0], draws[t,zind]),
-                      range(len(methods)))
+                      range(nmethods))
     return X
 
 
