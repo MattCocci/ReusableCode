@@ -1,0 +1,3 @@
+*.pyc
+Python/SDE/SpeedTests/SDE.pyx
+Python/SDE/SpeedTests/SDE_PurePython.py
