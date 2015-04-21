@@ -1,7 +1,7 @@
 function [] = write_table_tex(f, header, style, table_data)
 
 Ncol  = length(table_data);
-Nrow  = cellfun(@(c) length(c), table_data); 
+Nrow  = cellfun(@(c) length(c), table_data);
 if ~all(Nrow == Nrow(1))
   error('The number of rows in the table differs across columns')
 else
@@ -9,7 +9,7 @@ else
 end
 
 writeline = @(s) fprintf(f, '%s\n', s); % Might be defined in calling function
-helper_functions; 
+helper_functions;
 
 
 %% Write the tex part with the table sizing
@@ -18,10 +18,10 @@ writeline('\centering')
 writeline(['\begin{tabular}{', style, '}'])
 
 
-%% Write header 
+%% Write header
 
-  % Handle an extra grouping in the header 
-  if sum(cellfun(@(c) iscell(c), header)) 
+  % Handle an extra grouping in the header
+  if sum(cellfun(@(c) iscell(c), header))
     % ^If the "header" cell has cell elements, then the header will be multi-line
 
     % How many columns the multicolumn should be
@@ -34,7 +34,7 @@ writeline(['\begin{tabular}{', style, '}'])
     multi_headers          = repmat({''}, 1, length(ismulti));
     multi_headers(ismulti) = ...
       arrayfun(@(h) sprintf('\\multicolumn{%d}{c}{%s}', col_width(h), header{h}{1}), ...
-               find(ismulti), 'un', 0); 
+               find(ismulti), 'un', 0);
 
     % Write the multicolumn tex headers
     write_line = writeline([strjoin(multi_headers, ' & '), '\\']);

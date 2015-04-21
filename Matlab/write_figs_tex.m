@@ -13,29 +13,29 @@
 % -----------------
 % Since this function is recursive, the cell should be set up with nested
 % versions of the same pattern.
-%  
+%
 % Say that we want to create a document that has multiple pictures of
 % characters in various sitcoms.  The document might look like this:
-% 
+%
 % \section{Seinfield}
-% 
+%
 % \subsection{Jerry}
 % figure1
 % figure2
-% 
+%
 % \subsection{Elaine}
 % figure1
 % figure2
 % figure3
-% 
+%
 % \subsection{George}
 % figure1
 % figure2
-% 
+%
 % \subsection{Kramer}
 % figure1
 %
-% 
+%
 
 
 function [ ] = write_figcell_tex(fid, obj, n)
