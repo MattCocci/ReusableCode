@@ -1,52 +1,49 @@
 %% numgrad.m
 %
-% Compute numerical gradient of fcn at x.
+% Compute numerical gradient of scalar-valued fcn at x, a vector of
+% length n.
 %
 % Updated version of numgrad.m by Chris Sims and Jinill Kim.
-function [g, badg] = numgrad(fcn, x, args, opt)
+function [g, badg] = numgrad(fcn, x, args, varargin)
+
+% Setup
+n    = length(x);
+if size(x,1) < size(x,2)
+  x = x';
+end
 
 % Default settings
 defaults = struct(...
-            'delta',     1e-6, ... % Size of perturbations
-            'two_sided', 1, ...
+            'deltas',    1e-6*ones(n,1), ... % Size of perturbations
+            'idx_grad',  1:n, ...
+            'two_sided', 1 ...
             );
 
-% For those settings not provided, use defaults
-if ~exist('var', 'opt')
-  opt = defaults;
+% Set up options, filling in defaults where none provided
+opt = FillDefaultSettings(defaults, varargin{:});
+
+% Amounts to perturb x by
+delta = diag(opt.deltas);
+
+% Define gradient calculating function depending upon option used
+if defaults.two_sided
+  grad = @(i_) (1/delta(i_,i_))*(feval(fcn, x+delta(:,i_)/2, args{:}) ...
+                                  - feval(fcn, x-delta(:,i_)/2, args{:}));
 else
-  flds = fieldnames(defaults);
-  for f = 1:length(flds)
-    if ~isfield(opt, flds{f})
-      opt.(flds{f}) = defaults.(flds{f});
-    end
-  end
+  f0 = feval(fcn, x, args{:});
+  grad = @(i_) (1/delta(i_,i_))*(feval(fcn, x+delmat(:,i_)/2, args{:}) - f0);
 end
 
+g = nan(n,1);
+for i_ = opt.idx_grad
 
-n    = length(x);
-tvec = delta*eye(n);
+  g0 = grad(i_);
 
-f0 = feval(fcn, x, varargin{:});
-
-g = zeros(n,1);
-
-if
-
-for i=1:n
-   if size(x,1)>size(x,2)
-      tvecv=tvec(i,:);
-   else
-      tvecv=tvec(:,i);
-   end
-
-   g0 = (feval(fcn, x+tvecv, varargin{:}) - f0) ...
-         /(delta);
-   if abs(g0)< 1e15
-      g(i)=g0;
-   else
-      disp('bad gradient ------------------------')
-      g(i)=0;
-      badg=1;
-   end
+  if abs(g0)< 1e15
+    g(i_)=g0;
+  else
+    fprintf('-- Bad gradient for parameter %d --\n', i_);
+    g(i_)=0;
+    badg=1;
+  end
 end

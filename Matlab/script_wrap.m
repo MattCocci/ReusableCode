@@ -19,7 +19,7 @@
 %             structure (unpack=0)
 % - ret_vars  The second optional argument. This is a cell with the
 %             names of the variables to be returned
-% 
+%
 function [varargout] = script_wrap(script, varargin)
 
 % If given a cell, rather than a script, run the elements one by one
@@ -29,7 +29,7 @@ if iscell(script)
   end
 else
   eval(script);
-end 
+end
 
 %% Check if there are items to be returned and return them
 if nargin > 1
