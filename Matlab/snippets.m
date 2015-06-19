@@ -17,3 +17,9 @@ ma_gen = @(col_vec, pds) nan_before_n(filter(ones(1, pds)/pds, 1, col_vec), pds)
 
 % Generate a matrix of lags; d is a column vector, n is how far to lag it
 lag_mat = @(d, nlags) [nan(1,nlags); toeplitz(d(1:end-1), [d(1), nan(1, nlags-1)])]
+
+% Difference in months
+mthdiff = @(dtstart, dtend) diff(datevec([dtstart; dtend]))*[12 1 0 0 0 0]';
+
+% Generate an array of datenums, one for each month btwn two dates
+mthfill = @(dtstart, nmonths, dayinmth) datenum(cumsum([datevec(dtstart); ones(nmonths, 1)*[0 1 0 0 0 0]]));
