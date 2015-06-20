@@ -1,4 +1,4 @@
-function [] = WriteTeXTable(fid, header, style, tableData, above_tabular, below_tabular)
+function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTabular)
 %% WriteTeXTable - Writing tex tables from Matlab.
 %
 % NOTE: below, I will use NCOL and NROW to denote the maximal number of
@@ -13,47 +13,65 @@ function [] = WriteTeXTable(fid, header, style, tableData, above_tabular, below_
 %
 %               fid = fopen('TableName.tex', 'w')
 %
-% HEADER      Either:
-%             1.  Cell array of column titles/headers
-%             2.  An array structure of length Nheadrows, each with
-%                 field 'header' that contains a cell array of column
-%                 titles/headers
+%             Can also be NaN or something empty ([], '', {}) to print
+%             to screen.
+%
+% HEADER      Cell array of column titles/headers (multiple rows
+%             accepted)
 %
 %             NOTE: A cell array of column titles/headers can look like
 %             this
 %
 %                  {'Col1', 'Col2', 'Col3', 'Col4'};
 %             OR
-%                  {'Multi1', [1 2], 'Col3', 'Col4'};
+%                  {'Multi1', NaN, NaN, 'Col4'};
 %
-%             where having an array after text will cause that text to
-%             span the columns specified. Therefore, only text entries
-%             show up as column titles/headers, while arrays can be used
-%             to signify multi-column spanning
+%             where having a NaN after text will cause that text to
+%             span its column and all subsequent NaN columns via
+%             multicolumn. Therefore, only text entries show up as
+%             column titles/headers, while NaNs can be used to signify
+%             multi-column spanning. A cline will automatically be
+%             placed under.
 %
-% STYLE       Latex style for the columns like 'r|cccc' or 'l|rr|rr|'
+% STYLE       Latex style for the columns like 'r|cccc' or 'l|rr|rr|'.
 %
-% TABLEDATA   Array or cell matrix of table content to write. Though
+% TABLEBODY   Array or cell matrix of table content to write. Though
 %             headers are treated differently from data to display, no
 %             such distinction is made for the first column or couple of
 %             columns for labels. Just throw them in here.
 %
-%             If TABLEDATA is a numeric array, the numbers will be
-%             displayed to significant digits determined by this
+%             TABLEBODY as numeric araray
+%             ---------------------------
+%             The numbers will be displayed to significant digits
+%             determined by this program. If you would like to display
+%             them under a different choice of significant digits,
+%             store the values as strings in a cell array and see the
+%             next section.
 %
-%             Text is treated as given (i.e. it should be written as
-%             is). Numeric entries in 
+%             TABLEBODY as cell array
+%             -----------------------
+%             This gives the most control, and different entries of
+%             TABLEBODY will be treated differently depending upon the
+%             data type.
 %
-%             Example table_data
+%             In particular, here is the treatment by data type:
+%             - TEXT      Write as is
+%             - A NUMBER  Convert to significant digits determined by this
+%                         program
+%             - NaN       Take the previous value in the row, and
+%                         stretch it via multicolumn into this row too.
+%                         Multiple NaNs will stretch across more columns
+%             - EMPTY     Write nothing
 %
-%               table_data = [{'row1'; 'row2'; 'row3'},...
-%                             num2cell(magic(3))];
+% ABOVETABULAR  What to write in between \begin{table} and
+%               \begin{tabular}{style}. Can be a string or a cell of
+%               strings (which would be written one entry per line).
+% BELOWTABULAR  What to write in between \end{tabular} and \end{table}.
+%               Can be a string or a cell of strings (which would be
+%               written one entry per line).
 %
-% caption     Optional caption for table
-% fontsize    Optional fontsize like \scriptsize or \footnotesize
-%
-% Example usage
-% -------------
+% SIMPLE EXAMPLE
+% --------------
 %
 %   row_names  = {'row1'; 'row2'; 'row3'};
 %   data2write = randn(3);
@@ -66,125 +84,139 @@ function [] = WriteTeXTable(fid, header, style, tableData, above_tabular, below_
 %   fclose(fid);
 %
 
-Nrow = size(table_data,1);
-Ncol = size(table_data,2);
+%% Define some helper functions
 
-% Can set fileid to NaN to print to screen
-if isnan(fid)
-  writeline = @(s) fprintf('%s\n', s); % Might be defined in calling function
-else
-  writeline = @(s) fprintf(fid, '%s\n', s); % Might be defined in calling function
-end
-%helper_functions; 
-iif = @(varargin) varargin{2*find([varargin{1:2:end}], 1, 'first')}();
+  % Inline if statement
+  iif = @(varargin) varargin{2*find([varargin{1:2:end}], 1, 'first')}();
 
-%% Write the tex part with the table sizing
-writeline('\begin{table}[htpb!]');
-if exist('fontsize', 'var')
-  writeline(fontsize);
-end
-writeline('\centering');
-writeline(['\begin{tabular}{', style, '}']);
+  % Function to format numbers with specific significant digits and to
+  % format text into TeX friendly mode (& -> \&)
+  texify = @(x) x;
+  fmt = @(x) iif(isnumeric(x) && abs(x) < 1,  sprintf('%.3f', x), ...
+                 isnumeric(x) && abs(x) < 10, sprintf('%.2f', x), ...
+                 isnumeric(x),                sprintf('%.1f', x), ...
+                 isempty(x),                  '', ...
+                 true,                        @() texify(x));
 
-
-%% Write header 
-
-  % Handle an extra grouping in the header 
-  if sum(cellfun(@(c) iscell(c), header)) 
-    % ^If the "header" cell has cell elements, then the header will be multi-line
-
-    % How many columns the multicolumn should be
-    col_width = cellfun(@(h) iif(iscell(h), @() length(h{2}), true, 1), header)';
-      % ^Need the extra @() length(h{2}) in there so we don't evaluate h{2} right
-      % away, which would throw an error if h is not a cell
-
-    % Construct the multicolumn tex headers
-    ismulti = (col_width > 1);
-    multi_headers          = repmat({''}, 1, length(ismulti));
-    multi_headers(ismulti) = ...
-      arrayfun(@(h) sprintf('\\multicolumn{%d}{c}{%s}', col_width(h), header{h}{1}), ...
-               find(ismulti), 'un', 0);
-
-    % Write the multicolumn tex headers
-    write_line = writeline([strjoin(multi_headers, ' & '), '\\']);
-
-    % Write the clines
-    clines = [cumsum(col_width)-col_width+1, cumsum(col_width)];
-    clines = clines(ismulti,:);
-    arrayfun(@(ln) writeline(sprintf('\\cline{%d-%d}', clines(ln,1), clines(ln,2))), 1:size(clines,1));
-
-    % Make the header into the last and final header row (the one closest to the data)
-    header = cellfun(@(h) iif(iscell(h), @() h{2}, true, h), header, 'un', 0);
-    header = vertcat(header{:})';
+  % To write a single line to the file, writeline(string) rather than
+  % fprintf(fid, string). Also, no need to escape special chars this way
+  if isnan(fid) || isempty(fid)
+    writeline = @(s) fprintf('%s\n', s);
+  else
+    writeline = @(s) fprintf(fid, '%s\n', s);
   end
+  writerow  = @(rowcell) writeline([strjoin(rowcell, ' & '), '\\']);
 
-  % Write the usual header; if there is a column with NaN, extend the
-  % column to the left to cover it via multicolumn. i.e. 
-  %
-  % {'Jerry', 'George', NaN, 'Kramer', NaN, NaN, 'Elaine'} %
-  % will be translated as
-  %
-  % Jerry & \multicolumn{2}{c}{George} & \multicolumn{3}{c}{Kramer} & Elaine\\
-  colspans = cumsum(~cellfun(@(h) isnumeric(h) && isnan(h), header)); 
-  nlabs = length(unique(colspans)); % number of header labels that aren't empty
-  fullheader = cell(nlabs,1);
-  for c = 1:nlabs
-    span = sum(colspans == c);
-    lab  = header{find(colspans == c, 1)};
-    if span-1
-      fullheader{c} = sprintf('\\multicolumn{%d}{c}{%s}', span, lab);
+  % Write each element of a cell as a separate line;
+  writeCell = @(towrite) cellfun(@(txt) writeline(fmt(txt)), towrite);
+
+  % Takes either a string and writes that to a line, or a cell and
+  % writes each entry as a separate line
+  writeStringCell = @(towrite) iif( ischar(towrite), writeCell({towrite}), ...
+                                    iscell(towrite), writeCell( towrite ));
+
+
+%% Write the beginning of the table
+
+  writeline('\begin{table}[htpb!]');
+  if exist('aboveTabular', 'var')
+    writeStringCell(aboveTabular);
+  end
+  writeline('\centering');
+  writeline(['\begin{tabular}{', style, '}']);
+
+% Get the columns after which we have a | vertical line (with 0 being a
+% possibility if there is a vertical line before col 1 (so after row 0)
+
+  vertLines = [];
+  col = 0;
+  for n = 1:length(style)
+    if style(n) == '|'
+      vertLines(end+1) = col;
     else
-      fullheader{c} = lab; % Account for extra slash as escape
+      col = col + 1;
     end
   end
-  if size(fullheader,1) > 1 && size(fullheader,2) == 1, fullheader = fullheader'; end
-  writeline([strjoin(fullheader, ' & '), '\\\hline\hline']);
 
+%% Write header, then table body
 
-%% Write the table
+  toWrite          = {header, tableBody};
+  useClines        = [1 0];
+  doubleHlineAfter = [1 0];
 
-  % Function to format the table entries/elements
-  fmt = @(x) iif(isnumeric(x) && abs(x) < 1,  sprintf('%.3f', x), ...
-                  isnumeric(x) && abs(x) < 10,  sprintf('%.2f', x), ...
-                  isnumeric(x),                 sprintf('%.1f', x), ...
-                  true,                         x);
+  % Loop over objects to write
+  for w = 1:length(toWrite)
+    writing = toWrite{w};
+    [Nrow, Ncol] = size(writing);
 
-  % Loop over rows, possibly extending using multicolumn like above
-  for r = 1:size(table_data,1)
+    % Loop over rows within that object
+    for r = 1:Nrow
+      row = writing(r,:);
+      if ~iscell(row)
+        row = num2cell(row);
+      end
 
-    row = table_data(r,:); 
+      % Loop over columns of the row and mark its non-NaN entries
+      notNaN = zeros(1, Ncol);
+      for n = 1:Ncol
+        if isempty(row{n}) || ischar(row{n}) || ~isnan(row{n})
+          notNaN(n) = 1;
+        end
+      end
+      notNaN = find(notNaN);
 
-    % Array that will mark different column spans; will look like 
-    %   [1 2 2 3 4 4 4] 
-    % denoting that the first entry in "fullrow" below will span 1 column, the
-    % second will span 2, the third will span 1, and the fourth will span 3
-    % columns
+      % Loop over columns in row with actual text (rather than NaN, parse
+      % text, account for multicolumns, and store in cell for row to be
+      % written
+      rowEntries = cell(1,length(notNaN));
+      clines     = '';
+      for n = 1:length(notNaN)
 
-    colspans = cumsum(~cellfun(@(h) isnumeric(h) && isnan(h), row)); 
-    nentries = length(unique(colspans)); % number of entries (accounting for any multicolumn business)
+        % Start at current entry
+        startCol = notNaN(n);
 
-    fullrow = repmat({''}, nentries,1); % Will be a cell with the number of unique columns entries to be filled 
-    for c = 1:nentries
-      span  = sum(colspans == c); % Number of columns the first entry must span
-      entry = row{find(colspans == c, 1)}; % Get that first entry
-      if span-1
-        fullrow{c} = sprintf('\\multicolumn{%d}{c}{%s}', span, fmt(entry));
-      else
-        fullrow{c} = fmt(entry);
+        % Stop 1 before next entry or at end of row
+        if n < length(notNaN)
+          stopCol = notNaN(n+1)-1;
+        else
+          stopCol = Ncol;
+        end
+
+        % Store multicolumn or single column
+        if stopCol - startCol >= 1
+          % Check for left and right verts
+          leftVert = ''; rightVert = '';
+          if any(vertLines == (startCol-1)), leftVert  = '|'; end
+          if any(vertLines == stopCol),      rightVert = '|'; end
+
+          rowEntries{n} = sprintf('\\multicolumn{%sc%s}{%s}', ...
+                                  leftVert, rightVert, fmt(row{startCol}));
+          clines = [clines sprintf('\\cline{%d-%d}', startCol, stopCol)];
+        else
+          rowEntries{n} = fmt(row{startCol});
+        end
+      end  % End row construction
+
+      % Write row and clines
+      writerow(rowEntries);
+      if useClines(w) && ~isempty(clines)
+        writeline(clines);
       end
     end
-    if size(fullrow,1) > 1 && size(fullrow,2) == 1, fullrow = fullrow'; end
-    writeline([strjoin(fullrow, ' & '), '\\']);
-  end
 
+    if doubleHlineAfter(w)
+      writeline('\hline\hline');
+    end
+
+  end % End header and body writing
 
 % Conclude
 writeline('\hline');
 writeline('\end{tabular}');
 
 % Caption
-if exist('caption', 'var')
-  writeline(sprintf('\\caption{%s}', caption));
+if exist('belowTabular', 'var')
+  writeStringCell(belowTabular);
 end
 writeline('\end{table}');
 
