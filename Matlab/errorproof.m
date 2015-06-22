@@ -1,3 +1,4 @@
+% ERRORPROOF - To wrap functions so that any errors don't kill a program
 function [returned, errored_out] = errorproof(fcn, varargin)
 
 try

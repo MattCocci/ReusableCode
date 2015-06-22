@@ -1,8 +1,5 @@
-% OVERVIEW
-% --------
-% script_wrap.m: A function that can wrap a script (or a cell of
-%                commands) so that you can keep environments/workspaces
-%                separate.
+function [varargout] = script_wrap(script, varargin)
+% SCRIPTWRAP - Function to wrap scripts
 %
 % INPUTS
 % ------
@@ -19,8 +16,7 @@
 %             structure (unpack=0)
 % - ret_vars  The second optional argument. This is a cell with the
 %             names of the variables to be returned
-%
-function [varargout] = script_wrap(script, varargin)
+
 
 % If given a cell, rather than a script, run the elements one by one
 if iscell(script)

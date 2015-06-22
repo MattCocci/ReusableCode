@@ -14,7 +14,7 @@ function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTa
 %               fid = fopen('TableName.tex', 'w')
 %
 %             Can also be NaN or something empty ([], '', {}) to print
-%             to screen.
+%             to screen for testing purposes.
 %
 % HEADER      Cell array of column titles/headers (multiple rows
 %             accepted)
@@ -112,8 +112,8 @@ function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTa
 
   % Takes either a string and writes that to a line, or a cell and
   % writes each entry as a separate line
-  writeStringCell = @(towrite) iif( ischar(towrite), writeCell({towrite}), ...
-                                    iscell(towrite), writeCell( towrite ));
+  writeStringCell = @(towrite) iif( ischar(towrite), @() writeCell({towrite}), ...
+                                    iscell(towrite), @() writeCell( towrite ));
 
 
 %% Write the beginning of the table
