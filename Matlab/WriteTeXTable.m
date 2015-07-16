@@ -100,7 +100,7 @@ function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTa
 
   % To write a single line to the file, writeline(string) rather than
   % fprintf(fid, string). Also, no need to escape special chars this way
-  if isnan(fid) || isempty(fid)
+  if isempty(fid) || isnan(fid)
     writeline = @(s) fprintf('%s\n', s);
   else
     writeline = @(s) fprintf(fid, '%s\n', s);
@@ -119,7 +119,7 @@ function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTa
 %% Write the beginning of the table
 
   writeline('\begin{table}[htpb!]');
-  if exist('aboveTabular', 'var')
+  if exist('aboveTabular', 'var') && ~isempty(aboveTabular)
     writeStringCell(aboveTabular);
   end
   writeline('\centering');
@@ -183,14 +183,15 @@ function [] = WriteTeXTable(fid, header, style, tableBody, aboveTabular, belowTa
         end
 
         % Store multicolumn or single column
-        if stopCol - startCol >= 1
+        colGap = stopCol- startCol;
+        if colGap >= 1
           % Check for left and right verts
           leftVert = ''; rightVert = '';
           if any(vertLines == (startCol-1)), leftVert  = '|'; end
           if any(vertLines == stopCol),      rightVert = '|'; end
 
-          rowEntries{n} = sprintf('\\multicolumn{%sc%s}{%s}', ...
-                                  leftVert, rightVert, fmt(row{startCol}));
+          rowEntries{n} = sprintf('\\multicolumn{%d}{%sc%s}{%s}', ...
+                                  colGap+1, leftVert, rightVert, fmt(row{startCol}));
           clines = [clines sprintf('\\cline{%d-%d}', startCol, stopCol)];
         else
           rowEntries{n} = fmt(row{startCol});
@@ -215,7 +216,7 @@ writeline('\hline');
 writeline('\end{tabular}');
 
 % Caption
-if exist('belowTabular', 'var')
+if exist('belowTabular', 'var') && ~isempty(belowTabular)
   writeStringCell(belowTabular);
 end
 writeline('\end{table}');
