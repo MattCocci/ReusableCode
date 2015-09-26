@@ -1,3 +1,4 @@
+function [g, badg] = numgrad(fcn,x,varargin)
 % [g, badg] = numgrad(fcn,x,varargin)
 %
 % Description
@@ -17,7 +18,6 @@
 % -------
 % 6/19/15 Remove commented out code; rename some things
 
-function [g, badg] = numgrad(fcn,x,varargin)
 
 delta = 1e-6;
 Nx    = length(x);

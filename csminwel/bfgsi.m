@@ -1,3 +1,4 @@
+function H = bfgsi(H0,dg,dx)
 % H = bfgsi(H0,dg,dx)
 %
 % Description
@@ -24,7 +25,6 @@
 %
 % Copyright by Christopher Sims 1996.  This material may be freely
 % reproduced and modified.
-function H = bfgsi(H0,dg,dx)
 
 if size(dg,2) > 1, dg = dg'; end
 if size(dx,2) > 1, dx = dx'; end
