@@ -3,3 +3,10 @@ Python/SDE/SpeedTests/SDE.pyx
 Python/SDE/SpeedTests/SDE_PurePython.py
 *.so
 *build/
+../ShootingAlgorithm/Matlab/Archive/
+*.out
+*.log
+*.aux
+*.pdf
+Matlab/Test/
+ShootingProgram/Matlab/Archive/

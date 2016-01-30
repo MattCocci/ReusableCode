@@ -1,0 +1,529 @@
+\documentclass[12pt]{article}
+
+\author{Matthew D. Cocci}
+\title{Shooting Program}
+\date{\today}
+
+%% Formatting & Spacing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry} % most detailed page formatting control
+\usepackage{fullpage} % Simpler than using the geometry package; std effect
+\usepackage{setspace}
+%\onehalfspacing
+\usepackage{microtype}
+
+%% Formatting %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\usepackage[margin=1in]{geometry}
+    %   Adjust the margins with geometry package
+%\usepackage{pdflscape}
+    %   Allows landscape pages
+%\usepackage{layout}
+    %   Allows plotting of picture of formatting
+
+
+
+%% Header %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{}
+%\rhead{}
+%\chead{}
+%\setlength{\headheight}{15.2pt}
+    %   Make the header bigger to avoid overlap
+
+%\fancyhf{}
+    %   Erase header settings
+
+%\renewcommand{\headrulewidth}{0.3pt}
+    %   Width of the line
+
+%\setlength{\headsep}{0.2in}
+    %   Distance from line to text
+
+
+%% Mathematics Related %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathrsfs}
+\usepackage{amsthm} %allows for labeling of theorems
+%\numberwithin{equation}{section} % Number equations by section
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{cor}[thm]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition}
+\newtheorem{ex}[thm]{Example}
+
+\theoremstyle{remark}
+\newtheorem*{rmk}{Remark}
+\newtheorem*{note}{Note}
+
+% Below supports left-right alignment in matrices so the negative
+% signs don't look bad
+\makeatletter
+\renewcommand*\env@matrix[1][c]{\hskip -\arraycolsep
+  \let\@ifnextchar\new@ifnextchar
+  \array{*\c@MaxMatrixCols #1}}
+\makeatother
+
+
+%% Font Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+%\usepackage{blindtext}
+\usepackage{courier}
+
+
+%% Figures %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing}
+\usepackage{graphicx}
+\usepackage{subfigure}
+    %   For plotting multiple figures at once
+%\graphicspath{ {Directory/} }
+    %   Set a directory for where to look for figures
+
+
+%% Hyperlinks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{hyperref}
+\hypersetup{%
+    colorlinks,
+        %   This colors the links themselves, not boxes
+    citecolor=black,
+        %   Everything here and below changes link colors
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+%% Colors %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{color}
+\definecolor{codegreen}{RGB}{28,172,0}
+\definecolor{codelilas}{RGB}{170,55,241}
+
+% David4 color scheme
+\definecolor{d4blue}{RGB}{100,191,255}
+\definecolor{d4gray}{RGB}{175,175,175}
+\definecolor{d4black}{RGB}{85,85,85}
+\definecolor{d4orange}{RGB}{255,150,100}
+
+%% Including Code %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{verbatim}
+    %   For including verbatim code from files, no colors
+\usepackage{listings}
+    %   For including code snippets written directly in this doc
+
+\lstdefinestyle{bash}{%
+  language=bash,%
+  basicstyle=\footnotesize\ttfamily,%
+  showstringspaces=false,%
+  commentstyle=\color{gray},%
+  keywordstyle=\color{blue},%
+  xleftmargin=0.25in,%
+  xrightmargin=0.25in
+}
+
+\lstdefinestyle{matlab}{%
+  language=Matlab,%
+  basicstyle=\footnotesize\ttfamily,%
+  breaklines=true,%
+  morekeywords={matlab2tikz},%
+  keywordstyle=\color{blue},%
+  morekeywords=[2]{1}, keywordstyle=[2]{\color{black}},%
+  identifierstyle=\color{black},%
+  stringstyle=\color{codelilas},%
+  commentstyle=\color{codegreen},%
+  showstringspaces=false,%
+    %   Without this there will be a symbol in
+    %   the places where there is a space
+  numbers=left,%
+  numberstyle={\tiny \color{black}},%
+    %   Size of the numbers
+  numbersep=9pt,%
+    %   Defines how far the numbers are from the text
+  emph=[1]{for,end,break,switch,case},emphstyle=[1]\color{red},%
+    %   Some words to emphasise
+}
+
+\newcommand{\matlabcode}[1]{%
+    \lstset{style=matlab}%
+    \lstinputlisting{#1}
+}
+    %   For including Matlab code from .m file with colors,
+    %   line numbering, etc.
+
+%% Bibliographies %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\usepackage{natbib}
+    %---For bibliographies
+%\setlength{\bibsep}{3pt} % Set how far apart bibentries are
+
+%% Misc %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{enumitem}
+    %   Has to do with enumeration
+\usepackage{appendix}
+%\usepackage{natbib}
+    %   For bibliographies
+\usepackage{pdfpages}
+    %   For including whole pdf pages as a page in doc
+
+
+%% User Defined %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\newcommand{\nameofcmd}{Text to display}
+\newcommand*{\Chi}{\mbox{\large$\chi$}} %big chi
+    %   Bigger Chi
+
+% In math mode, Use this instead of \munderbar, since that changes the
+% font from math to regular
+\makeatletter
+\def\munderbar#1{\underline{\sbox\tw@{$#1$}\dp\tw@\z@\box\tw@}}
+\makeatother
+
+% Limits
+\newcommand{\limN}{\lim_{N\rightarrow\infty}}
+\newcommand{\limn}{\lim_{n\rightarrow\infty}}
+\newcommand{\limt}{\lim_{t\rightarrow\infty}}
+\newcommand{\limT}{\lim_{T\rightarrow\infty}}
+\newcommand{\limhz}{\lim_{h\rightarrow 0}}
+
+% Misc Math
+\newcommand{\Prb}{\mathrm{P}}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\diag}{\text{diag}}
+\newcommand{\ch}{\text{ch}}
+\newcommand{\dom}{\text{dom}}
+
+% Script
+\newcommand{\sF}{\mathscr{F}}
+\newcommand{\sB}{\mathscr{B}}
+\newcommand{\sL}{\mathscr{L}}
+\newcommand{\sM}{\mathscr{M}}
+\newcommand{\sT}{\mathscr{T}}
+\newcommand{\sA}{\mathscr{A}}
+
+% Mathcal
+\newcommand{\calB}{\mathcal{B}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calG}{\mathcal{G}}
+\newcommand{\calH}{\mathcal{H}}
+
+% Dot over
+\newcommand{\dx}{\dot{x}}
+\newcommand{\ddx}{\ddot{x}}
+
+% Blackboard
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rn}{\mathbb{R}^n}
+\newcommand{\Rk}{\mathbb{R}^n}
+\newcommand{\Rnn}{\mathbb{R}^{n\times n}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Cn}{\mathbb{C}^n}
+\newcommand{\Cnn}{\mathbb{C}^{n\times n}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\N}{\mathbb{N}}
+
+\DeclareMathOperator*{\argmin}{arg\;min}
+\DeclareMathOperator*{\argmax}{arg\;max}
+\newenvironment{rcases}
+  {\left.\begin{aligned}}
+  {\end{aligned}\right\rbrace}
+
+% Various probability and statistics commands
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\Corr}{\operatorname{Corr}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\asto}{\xrightarrow{a.s.}}
+\newcommand{\pto}{\xrightarrow{p}}
+\newcommand{\msto}{\xrightarrow{m.s.}}
+\newcommand{\dto}{\xrightarrow{d}}
+\newcommand{\Lpto}{\xrightarrow{L_p}}
+\newcommand{\plim}{\text{plim}_{n\rightarrow\infty}}
+
+% Redefine real and imaginary from fraktur to plain text
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+
+% Shorter sums: ``Sum from X to Y''
+% - sumXY  is equivalent to \sum^Y_{X=1}
+% - sumXYz is equivalent to \sum^Y_{X=0}
+\newcommand{\sumnN}{\sum^N_{n=1}}
+\newcommand{\sumin}{\sum^n_{i=1}}
+\newcommand{\sumkn}{\sum^n_{k=1}}
+\newcommand{\sumtT}{\sum^T_{t=1}}
+\newcommand{\sumninf}{\sum^\infty_{n=1}}
+\newcommand{\sumtinf}{\sum^\infty_{t=1}}
+\newcommand{\sumnNz}{\sum^N_{n=0}}
+\newcommand{\suminz}{\sum^n_{i=0}}
+\newcommand{\sumknz}{\sum^n_{k=0}}
+\newcommand{\sumtTz}{\sum^T_{t=0}}
+\newcommand{\sumninfz}{\sum^\infty_{n=0}}
+\newcommand{\sumtinfz}{\sum^\infty_{t=0}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+\maketitle
+
+%\tableofcontents
+
+Max capital is where all output goes to depreciation, i.e.
+\begin{align*}
+  f(k) &= \delta k \\
+  \implies\quad
+  \text{$k_{max}$ root of}\quad
+  0 &= f(k) - \delta k
+\end{align*}
+Steady state capital is where
+\begin{align*}
+  \frac{1}{\beta}
+  &= f'(k) + (1-\delta) \\
+  \implies\quad
+  \text{$k_{max}$ root of}\quad
+  0 &= \frac{1}{\beta} - f'(k) - (1-\delta)
+\end{align*}
+We can maybe solve this analytically:
+\begin{align*}
+  k_{ss} &=
+  f'^{-1}\left(\frac{1}{\beta} - (1-\delta)\right)
+\end{align*}
+The standard first order conditions are
+\begin{align*}
+  \frac{u'(c_t)}{\beta u'(c_{t+1})}
+  &= f'(k_t) + (1-\delta)
+\end{align*}
+Or, in term of capital only using the market clearing conditions
+\begin{align*}
+  c_t &=
+  f(k_t) + (1-\delta)k_t - k_{t+1}
+\end{align*}
+we can get
+\begin{align*}
+  \frac{u'\big(f(k_t) + (1-\delta)k_t - k_{t+1}\big)}{%
+    \beta u'\big((f(k_{t+1}) + (1-\delta)k_{t+1} - k_{t+2})\big)}
+  &= f'(k_t) + (1-\delta)
+\end{align*}
+\clearpage
+Iterating on the first order conditions to compute the transition path,
+starting from a $k_0<k_{ss}$ (steady state).
+\begin{enumerate}
+  \item Start with some initial capital level $k_0$.
+
+  \item Given $k_{t-1}$, we want to find $k_{t}$.
+    \begin{enumerate}
+      \item We know that $k_{t}$ will lie in the range
+        $[k_{t-1},k_{ss}]$. So initialize the min and max bounds for our
+        search to be $k_{min}=k_{t-1}$ and $k_{max}=k_{ss}$ so that
+        \begin{align*}
+          k_{t} \in [k_{min},k_{max}]
+          = [k_{t-1},k_{ss}]
+        \end{align*}
+
+      \item Given $k_{min}$ and $k_{max}$, propose some value
+        $\hat{k}_{t}$ within this range for next period capital. We
+        choose the midpoint:
+        \begin{align*}
+          \hat{k}_{t} = \frac{k_{min}+k_{max}}{2}
+        \end{align*}
+        Then check the following given some small tolerance value
+        $\epsilon$:
+        \begin{enumerate}
+          \item $|k_{max}-k_{min}|< \epsilon \cdot k_{ss}$: Congrats,
+            you found $k_{t}$.\footnote{Up to machine precision}
+            Set $k_t=\hat{k}_t$.
+          \item Otherwise, proceed to (c)
+        \end{enumerate}
+
+      \item Given guess $\hat{k}_t$ and already-determined
+        $\hat{k}_{t-1}=k_{t-1}$, we want to iterate on the FOCs to build
+        up the sequence
+        \begin{align*}
+          \hat{k}_{t-1},\hat{k}_t,\hat{k}_{t+1},\hat{k}_{t+2},\ldots
+        \end{align*}
+        to make sure that the path doesn't shoot off to zero or
+        infinity.
+        \\
+        \\
+        We do this as follows
+        \begin{enumerate}
+          \item Given
+            $\hat{k}_{t-1},\hat{k}_t,\ldots,\hat{k}_{s-2},\hat{k}_{s-1}$
+            for $s\geq t+1$, we want to find $\hat{k}_s$. We can solve
+            for this using the FOCs
+            \begin{align*}
+              \frac{%
+                u'\big(
+                  f(\hat{k}_{s-2})
+                  + (1-\delta)\hat{k}_{s-2} - \hat{k}_{s-1}
+                \big)
+              }{%
+                \beta u'\big(
+                f(\hat{k}_{s-1}) + (1-\delta)\hat{k}_{s-1} -
+                  \hat{k}_{s}
+                \big)
+              }
+              &= f'(\hat{k}_{s-2}) + (1-\delta)
+            \end{align*}
+            We can solve for the root of that equation numerically, or
+            maybe we can do this analytically:
+            \begin{align*}
+              \hat{k}_{s}
+              &= f(\hat{k}_{s-1}) + (1-\delta)\hat{k}_{s-1} -
+              u'^{-1}
+              \left(
+                \frac{%
+                  u'\big(
+                  f(\hat{k}_{s-2}) + (1-\delta)\hat{k}_{s-2}
+                  - \hat{k}_{s-1}
+                  \big)
+                }{%
+                  \beta\left[
+                  f'(\hat{k}_{s-2}) + (1-\delta)
+                  \right]
+                }
+              \right)
+            \end{align*}
+
+          \item Check $\hat{k}_s$.
+            \begin{itemize}
+              \item $\hat{k}_s\leq \hat{k}_{s-1}$: Then the starting
+                guess $\hat{k}_t$ was too low. Reset
+                \begin{align*}
+                  k_{min} = \hat{k}_t
+                \end{align*}
+                and return to step (b) above.
+
+              \item $\hat{k}_s>k_{ss}$: Then the starting guess
+                $\hat{k}_t$ was too high. Reset
+                \begin{align*}
+                  k_{max} = \hat{k}_t
+                \end{align*}
+                and return to step (b) above
+
+              \item Otherwise: Return to (i) and keep iterating on dem
+                FOCs.
+            \end{itemize}
+
+        \end{enumerate}
+    \end{enumerate}
+
+\end{enumerate}
+
+
+
+%% APPPENDIX %%
+
+% \appendix
+
+
+
+
+\end{document}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% SAMPLE CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %% VIEW LAYOUT %%
+
+        \layout
+
+    %% LANDSCAPE PAGE %%
+
+        \begin{landscape}
+        \end{landscape}
+
+    %% BIBLIOGRAPHIES %%
+
+        \cite{LabelInSourcesFile}  %Use in text; cites
+        \citep{LabelInSourcesFile} %Use in text; cites in parens
+
+        \nocite{LabelInSourceFile} % Includes in refs w/o specific citation
+        \bibliographystyle{apalike}  % Or some other style
+
+        % To ditch the ``References'' header
+        \begingroup
+        \renewcommand{\section}[2]{}
+        \endgroup
+
+        \bibliography{sources} % where sources.bib has all the citation info
+
+    %% SPACING %%
+
+        \vspace{1in}
+        \hspace{1in}
+
+    %% URLS, EMAIL, AND LOCAL FILES %%
+
+      \url{url}
+      \href{url}{name}
+      \href{mailto:mcocci@raidenlovessusie.com}{name}
+      \href{run:/path/to/file.pdf}{name}
+
+
+    %% INCLUDING PDF PAGE %%
+
+        \includepdf{file.pdf}
+
+
+    %% INCLUDING CODE %%
+
+        %\verbatiminput{file.ext}
+            %   Includes verbatim text from the file
+
+        \texttt{text}
+            %   Renders text in courier, or code-like, font
+
+        \matlabcode{file.m}
+            %   Includes Matlab code with colors and line numbers
+
+        \lstset{style=bash}
+        \begin{lstlisting}
+        \end{lstlisting}
+            % Inline code rendering
+
+
+    %% INCLUDING FIGURES %%
+
+        % Basic Figure with size scaling
+            \begin{figure}[h!]
+               \centering
+               \includegraphics[scale=1]{file.pdf}
+            \end{figure}
+
+        % Basic Figure with specific height
+            \begin{figure}[h!]
+               \centering
+               \includegraphics[height=5in, width=5in]{file.pdf}
+            \end{figure}
+
+        % Figure with cropping, where the order for trimming is  L, B, R, T
+            \begin{figure}
+               \centering
+               \includegraphics[trim={1cm, 1cm, 1cm, 1cm}, clip]{file.pdf}
+            \end{figure}
+
+        % Side by Side figures: Use the tabular environment
+
+
