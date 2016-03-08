@@ -1,4 +1,9 @@
 function [capT, Ns, Ny, C, T, R, D, M, Q] = kalman_parse_check(sysmats, data, s0, ss0)
+% kalman_parse_check.m
+%
+% FUnction to parse and check inputs (data, system matrices, etc.) for
+% kfilter.m and ksmoother.m. Return errors if something wrong, matrices
+% and parameters if everything checks out.
 
   %% Make sure you have all of the matrices you need
   matsnames = ['C'; 'T'; 'R'; 'D'; 'M'; 'Q'];
