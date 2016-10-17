@@ -1,4 +1,4 @@
-function [est] = GMM_LinearModel(y,X,Z,twostage,W0)
+function [est] = GMM_EstimateLinearModel(y,X,Z,twostage,W0)
 %
 % Function to estimate single equation linear regression model with
 % potentially endogenous regressors via GMM. Model assumed to be of form
@@ -50,7 +50,7 @@ function [est] = GMM_LinearModel(y,X,Z,twostage,W0)
     squaremat = @(A) A'*A;
 
     % GMM estimate of parameters weighting matrix W
-    estparams = @(W) (X'*Z*W*Z'*X)\(X'*Z*W*Z'*y);
+    estparams = @(W, beta_init) (X'*Z*W*Z'*X)\(X'*Z*W*Z'*y); % beta_init unused arg
 
     % Compute errors
     errors = @(beta) (y-X*beta);
@@ -60,7 +60,7 @@ function [est] = GMM_LinearModel(y,X,Z,twostage,W0)
     Omegahat = @(beta) squaremat( repmat(errors(beta),1,NZvars).*Z )/Nobs;
 
     % Consistent estimator for G=E[dg_n/dbeta'] always the same
-    Ghat = Z'*X/Nobs;
+    Ghat = @(beta) Z'*X/Nobs;
 
     % Compute the J statistic
     gbar = @(beta)   Z'*(y-X*beta)/Nobs;
@@ -68,20 +68,7 @@ function [est] = GMM_LinearModel(y,X,Z,twostage,W0)
 
   %% Estimate the model
 
-    % Compute (and store) first stage parameter estimates and stderrs
-    est.betahat0  = estparams(W0);
-    Omegahat0     = Omegahat(est.betahat0);
-    est.stderrs0  = (Ghat'*W0*Ghat)\(Ghat'*W0*Omegahat0*W0*Ghat)*inv(Ghat'*W0*Ghat);
-    est.J0        = J(est.betahat0,W0);
-
-    % If also want estimates and standard errors for two-stage estimate
-    if twostage
-      W1            = inv(Omegahat0);
-      est.betahat1  = estparams(W1);
-      Omegahat1     = Omegahat(est.betahat1);
-      est.stderrs1  = inv(Ghat'*W1*Ghat);
-      est.J1        = J(est.betahat1,W1);
-    end
+    est = GMM_ImplementTwoStage(W0, NaN, estparams, J, Ghat, Omegahat, twostage);
 
 end
 
