@@ -15,7 +15,7 @@ function [unconstr, constr] = paratransf(l,u)
 % constr    Inverse of unconstr. Takes transformed params on
 %           unconstrained domain, puts them back on constrained domain
 %
-% NOTE: theta = constr(unconstr(theta))
+% Hence theta = constr(unconstr(theta))
 %
 
   %% Parse Bounds:

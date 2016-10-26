@@ -18,19 +18,18 @@ function [est] = GMM_EstimateLinearModel(y,X,Z,twostage,W0)
 %
 % The FOCs of the above min problem lead to the following analytical
 % formulas for the estimates, while asymptotic theory provides the
-% following analytical formulas for the standard errors
+% analytical formulas for the standard errors
 %
 %   betahat(W) = (X'*Z*W*Z'*X) \ (X'*Z*W*Z'y)
 %
 % Inputs
 % ------
 % y         (Nobs x 1) vector of dependent variable observations
-% X         (Nobs x NXvars) matrix of potentially endogenous regressors
+% X         (Nobs x NXvars) matrix of (possibly endogenous) regressors
 % Z         (Nobs x NZvars) matrix of predetermined instruments. Note
 %           that we must have NZvars >= NXvars for identification
-% twostage  Optional. Whether do two-stage efficient GMM. Default true
-% W0        Optional. Initial weighting matrix. Default is eye(NZvars)
-%
+% twostage  Optional arg. Do two-stage efficient GMM?  Default: true
+% W0        Optional arg. Initial weighting matrix. Default is eye(NZvars)
 %
 
   if ~exist('twostage', 'var')
@@ -46,23 +45,26 @@ function [est] = GMM_EstimateLinearModel(y,X,Z,twostage,W0)
 
   %% General purpose functions
 
-    % Given any matrix A, compute "square" A'*A
-    squaremat = @(A) A'*A;
+    % Given any matrix A, compute it's "square/cross product" A'*A
+    crossprod = @(A) A'*A;
 
-    % GMM estimate of parameters weighting matrix W
-    estparams = @(W, beta_init) (X'*Z*W*Z'*X)\(X'*Z*W*Z'*y); % beta_init unused arg
+    % Function to return GMM est of params given weighting matrix W
+    % NOTE: beta_init is an unused argument, but necessary for passing
+    % this as a function to GMM_ImplementTwoStage
+    estparams = @(W, beta_init) (X'*Z*W*Z'*X)\(X'*Z*W*Z'*y);
 
-    % Compute errors
+    % Function to compute errors given a guess for beta
     errors = @(beta) (y-X*beta);
 
     % Given parameter estimates beta, return constistent estimate for
-    % Omega, the asymptotic var of g_n(beta)
-    Omegahat = @(beta) squaremat( repmat(errors(beta),1,NZvars).*Z )/Nobs;
+    % Omega = Var(g_n(beta)) at true beta
+    Omegahat = @(beta) crossprod( repmat(errors(beta),1,NZvars).*Z )/Nobs;
 
-    % Consistent estimator for G=E[dg_n/dbeta'] always the same
+    % Consistent estimator for G=E[dg_n/dbeta'] always the same,
+    % regardless of beta
     Ghat = @(beta) Z'*X/Nobs;
 
-    % Compute the J statistic
+    % Function to compute J statistic
     gbar = @(beta)   Z'*(y-X*beta)/Nobs;
     J    = @(beta,W) Nobs*gbar(beta)'*W*gbar(beta);
 
