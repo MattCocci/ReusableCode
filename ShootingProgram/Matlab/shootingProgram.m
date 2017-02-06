@@ -53,8 +53,17 @@ function [R] = shootingProgram(fcns, beta, delta, lambda, T)
         k_s = f(k_s1) + (1-delta)*k_s1 ...
               - duinv(...
                   du( c(k_s2,k_s1) ) / ...
-                  (beta*( df(k_s1) + (1-delta)))
+                  (beta*( df(k_s1) + (1-delta))) ...
               );
+
+        %if c(k_s2,k_s1)<=0
+          %[k_s kss]
+        %end
+        %if t <=2
+          %[duinv(du(c(k_s2,k_s1)) / ...
+                  %(beta*( df(k_s1) + (1-delta))))]
+          %keyboard
+        %end
 
         % Check to see if k path is going to zero (k_t was too low)
         if k_s <= k_s1
@@ -92,5 +101,5 @@ function [R] = shootingProgram(fcns, beta, delta, lambda, T)
   R.csol  = [c(ksol(1:(T-1)), ksol(2:T)); NaN];
   R.srate = 1 - R.csol./R.ysol;
 
- end
+end
 

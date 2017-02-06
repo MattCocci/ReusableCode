@@ -11,14 +11,14 @@
   fcns.dfinv = @(y) (y/(A*alpha)).^(1/(alpha-1));
 
   % Preferences/utility related
-  % u     = (c^(1-gamma))/(1-gamma)
+  % u     = (c^(1-sigma))/(1-sigma)
   % du    = du/dc
   % duinv = functional inverse of du
   beta       = 0.96;
-  gamma      = 0.999;
-  fcns.u     = @(c) (c.^(1-gamma))/(1-gamma);
-  fcns.du    = @(c) c.^(-gamma);
-  fcns.duinv = @(v) v.^(-1/gamma);
+  sigma      = 0.999;
+  fcns.u     = @(c) (c.^(1-sigma))/(1-sigma);
+  fcns.du    = @(c) c.^(-sigma);
+  fcns.duinv = @(v) v.^(-1/sigma);
 
   % Depreciation rate
   delta = 0.08;
