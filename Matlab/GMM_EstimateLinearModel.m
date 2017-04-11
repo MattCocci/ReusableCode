@@ -70,7 +70,7 @@ function [est] = GMM_EstimateLinearModel(y,X,Z,twostage,W0)
 
   %% Estimate the model
 
-    est = GMM_ImplementTwoStage(W0, NaN, estparams, J, Ghat, Omegahat, twostage);
+    est = GMM_ImplementTwoStage(Nobs, W0, NaN, estparams, J, Ghat, Omegahat, twostage);
 
 end
 
